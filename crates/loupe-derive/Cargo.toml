@@ -1,0 +1,16 @@
+[package]
+name = "loupe-derive"
+version = "0.1.0"
+description = "Memory profiling tool for Rust"
+repository = "https://github.com/wasmerio/loupe"
+license = "MIT"
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "1", features = ["full"] }
+quote = "1"
+loupe = { path = "../loupe", version = "0.1.0" }
+

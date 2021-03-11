@@ -1,0 +1,13 @@
+[package]
+name = "loupe"
+version = "0.1.0"
+description = "Memory profiling tool for Rust"
+repository = "https://github.com/wasmerio/loupe"
+license = "MIT"
+edition = "2018"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = "0.3"
+
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+libc = { version = "^0.2", default-features = false }
