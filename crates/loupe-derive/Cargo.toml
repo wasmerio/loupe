@@ -10,7 +10,7 @@ edition = "2018"
 proc-macro = true
 
 [dependencies]
-syn = { version = "1", features = ["full"] }
-quote = "1"
+syn = { version = "1.0", features = ["full"] }
+quote = "1.0"
 loupe = { path = "../loupe", version = "0.1.0" }
 

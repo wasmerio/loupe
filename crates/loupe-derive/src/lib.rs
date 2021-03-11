@@ -1,17 +1,20 @@
-use proc_macro;
-use quote::{quote, quote_spanned};
-use syn::*;
+use proc_macro::TokenStream;
+use quote::{format_ident, quote, quote_spanned};
+use syn::{parse, Data, DataEnum, DataStruct, DeriveInput, Fields, Generics, Ident, Index};
 
 #[proc_macro_derive(MemoryUsage)]
-pub fn derive_memory_usage(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input: DeriveInput = parse(input).unwrap();
-    match input.data {
+pub fn derive_memory_usage(input: TokenStream) -> TokenStream {
+    let derive_input: DeriveInput = parse(input).unwrap();
+
+    match derive_input.data {
         Data::Struct(ref struct_data) => {
-            derive_memory_usage_struct(&input.ident, struct_data, &input.generics)
+            derive_memory_usage_for_struct(&derive_input.ident, struct_data, &derive_input.generics)
         }
+
         Data::Enum(ref enum_data) => {
-            derive_memory_usage_enum(&input.ident, enum_data, &input.generics)
+            derive_memory_usage_for_enum(&derive_input.ident, enum_data, &derive_input.generics)
         }
+
         Data::Union(_) => panic!("unions are not yet implemented"),
         /*
         // TODO: unions.
@@ -38,30 +41,37 @@ where
     }
 }
 
-fn derive_memory_usage_struct(
+fn derive_memory_usage_for_struct(
     struct_name: &Ident,
     data: &DataStruct,
     generics: &Generics,
-) -> proc_macro::TokenStream {
+) -> TokenStream {
     let lifetimes_and_generics = &generics.params;
     let where_clause = &generics.where_clause;
+
     let sum = join_fold(
         match &data.fields {
             Fields::Named(ref fields) => fields
                 .named
                 .iter()
                 .map(|field| {
-                    let id = field.ident.as_ref().unwrap();
-                    let span = id.span();
-                    quote_spanned! ( span=>MemoryUsage::size_of_val(&self.#id, visited) - std::mem::size_of_val(&self.#id) )
+                    let ident = field.ident.as_ref().unwrap();
+                    let span = ident.span();
+
+                    quote_spanned!(
+                        span => MemoryUsage::size_of_val(&self.#ident, visited) - std::mem::size_of_val(&self.#ident)
+                    )
                 })
                 .collect(),
+
             Fields::Unit => vec![],
+
             Fields::Unnamed(ref fields) => (0..(fields.unnamed.iter().count()))
                 .into_iter()
                 .map(|field| {
-                    let id = Index::from(field);
-                    quote! { MemoryUsage::size_of_val(&self.#id, visited) - std::mem::size_of_val(&self.#id) }
+                    let ident = Index::from(field);
+
+                    quote! { MemoryUsage::size_of_val(&self.#ident, visited) - std::mem::size_of_val(&self.#ident) }
                 })
                 .collect(),
         }
@@ -73,7 +83,9 @@ fn derive_memory_usage_struct(
 
     (quote! {
         #[allow(dead_code)]
-        impl < #lifetimes_and_generics > MemoryUsage for #struct_name < #lifetimes_and_generics > #where_clause {
+        impl < #lifetimes_and_generics > MemoryUsage for #struct_name < #lifetimes_and_generics >
+        #where_clause
+        {
             fn size_of_val(&self, visited: &mut MemoryUsageVisited) -> usize {
                 std::mem::size_of_val(self) + #sum
             }
@@ -82,68 +94,90 @@ fn derive_memory_usage_struct(
     .into()
 }
 
-fn derive_memory_usage_enum(
+fn derive_memory_usage_for_enum(
     struct_name: &Ident,
     data: &DataEnum,
     generics: &Generics,
-) -> proc_macro::TokenStream {
+) -> TokenStream {
     let lifetimes_and_generics = &generics.params;
     let where_clause = &generics.where_clause;
-    let each_variant = join_fold(
-        data.variants.iter().map(|variant| {
-            let ident = &variant.ident;
-            let span = ident.span();
-            let (pattern, sum) = match variant.fields {
-                Fields::Named(ref fields) => {
-                    let identifiers = fields.named.iter().map(|field| {
-                        let id = field.ident.as_ref().unwrap();
-                        let span = id.span();
-                        quote_spanned!(span=>#id)
-                    });
-                    let pattern =
-                        join_fold(identifiers.clone(), |x, y| quote! { #x , #y }, quote! {});
-                    let sum = join_fold(
-                        identifiers.map(|v| quote! { MemoryUsage::size_of_val(#v, visited) - std::mem::size_of_val(#v) }),
-                        |x, y| quote! { #x + #y },
-                        quote! { 0 },
-                    );
-                    (quote! { { #pattern } }, quote! { #sum })
-                }
-                Fields::Unit => (quote! {}, quote! { 0 }),
-                Fields::Unnamed(ref fields) => {
-                    let identifiers =
-                        (0..(fields.unnamed.iter().count()))
+
+    let match_arms = join_fold(
+        data.variants
+            .iter()
+            .map(|variant| {
+                let ident = &variant.ident;
+                let span = ident.span();
+
+                let (pattern, sum) = match variant.fields {
+                    Fields::Named(ref fields) => {
+                        let identifiers = fields.named.iter().map(|field| {
+                            let ident = field.ident.as_ref().unwrap();
+                            let span = ident.span();
+
+                            quote_spanned!(span => #ident)
+                        });
+
+                        let pattern =
+                            join_fold(
+                                identifiers.clone(),
+                                |x, y| quote! { #x , #y },
+                                quote! {}
+                            );
+
+                        let sum = join_fold(
+                            identifiers.map(|ident| quote! { MemoryUsage::size_of_val(#ident, visited) - std::mem::size_of_val(#ident) }),
+                            |x, y| quote! { #x + #y },
+                            quote! { 0 },
+                        );
+
+                        (quote! { { #pattern } }, quote! { #sum })
+                    }
+
+                    Fields::Unit => (quote! {}, quote! { 0 }),
+
+                    Fields::Unnamed(ref fields) => {
+                        let identifiers =
+                            (0..(fields.unnamed.iter().count()))
                             .into_iter()
                             .map(|field| {
-                                let id = Ident::new(
-                                    &format!("value{}", field),
-                                    export::Span::call_site(),
-                                );
-                                quote!(#id)
+                                let ident = Index::from(field);
+                                let ident = format_ident!("value{}", ident);
+
+                                quote! { #ident }
                             });
-                    let pattern =
-                        join_fold(identifiers.clone(), |x, y| quote! { #x , #y }, quote! {});
-                    let sum = join_fold(
-                        identifiers.map(|v| quote! { MemoryUsage::size_of_val(#v, visited) - std::mem::size_of_val(#v) }),
-                        |x, y| quote! { #x + #y },
-                        quote! { 0 },
-                    );
-                    (quote! { ( #pattern ) }, quote! { #sum })
-                }
-            };
-            quote_spanned! { span=>Self::#ident#pattern => #sum }
-        }),
+
+                        let pattern =
+                            join_fold(
+                                identifiers.clone(),
+                                |x, y| quote! { #x , #y },
+                                quote! {}
+                            );
+
+                        let sum = join_fold(
+                            identifiers.map(|ident| quote! { MemoryUsage::size_of_val(#ident, visited) - std::mem::size_of_val(#ident) }),
+                            |x, y| quote! { #x + #y },
+                            quote! { 0 },
+                        );
+                        (quote! { ( #pattern ) }, quote! { #sum })
+                    }
+                };
+
+                quote_spanned! { span=> Self::#ident#pattern => #sum }
+            }
+        ),
         |x, y| quote! { #x , #y },
         quote! {},
     );
-    //dbg!(&each_variant);
 
     (quote! {
         #[allow(dead_code)]
-        impl < #lifetimes_and_generics > MemoryUsage for #struct_name < #lifetimes_and_generics > #where_clause {
+        impl < #lifetimes_and_generics > MemoryUsage for #struct_name < #lifetimes_and_generics >
+        #where_clause
+        {
             fn size_of_val(&self, visited: &mut MemoryUsageVisited) -> usize {
                 std::mem::size_of_val(self) + match self {
-                    #each_variant
+                    #match_arms
                 }
             }
         }
