@@ -87,8 +87,7 @@ fn derive_memory_usage_for_struct(
                 })
                 .collect(),
         }
-        .iter()
-        .cloned(), // TODO: shouldn't need cloned here
+        .into_iter(),
         |x, y| quote! { #x + #y },
         quote! { 0 },
     );
