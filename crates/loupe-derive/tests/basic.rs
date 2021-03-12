@@ -3,6 +3,15 @@ use loupe_derive::MemoryUsage;
 
 use std::collections::BTreeSet;
 
+macro_rules! assert_size_of_val_eq {
+    ($expected:expr, $value:expr) => {
+        assert_eq!(
+            $expected,
+            MemoryUsage::size_of_val(&$value, &mut BTreeSet::new())
+        );
+    };
+}
+
 #[test]
 fn test_struct_flat() {
     #[derive(MemoryUsage)]
@@ -11,8 +20,7 @@ fn test_struct_flat() {
         y: i32,
     }
 
-    let p = Point { x: 1, y: 2 };
-    assert_eq!(8, MemoryUsage::size_of_val(&p, &mut BTreeSet::new()));
+    assert_size_of_val_eq!(8, Point { x: 1, y: 2 });
 }
 
 #[test]
@@ -20,8 +28,7 @@ fn test_tuple() {
     #[derive(MemoryUsage)]
     struct Tuple(i32, i32);
 
-    let p = Tuple(1, 2);
-    assert_eq!(8, MemoryUsage::size_of_val(&p, &mut BTreeSet::new()));
+    assert_size_of_val_eq!(8, Tuple(1, 2));
 }
 
 #[test]
@@ -35,8 +42,7 @@ fn test_struct_generic() {
         y: T,
     }
 
-    let g = Generic { x: 1i64, y: 2i64 };
-    assert_eq!(16, MemoryUsage::size_of_val(&g, &mut BTreeSet::new()));
+    assert_size_of_val_eq!(16, Generic { x: 1i64, y: 2i64 });
 }
 
 #[test]
@@ -44,8 +50,7 @@ fn test_struct_empty() {
     #[derive(MemoryUsage)]
     struct Empty;
 
-    let e = Empty;
-    assert_eq!(0, MemoryUsage::size_of_val(&e, &mut BTreeSet::new()));
+    assert_size_of_val_eq!(0, Empty);
 }
 
 #[test]
@@ -60,12 +65,17 @@ fn test_struct_padding() {
         z: i8,
     }
 
-    let p = Padding { x: 1, y: 2, z: 3 };
-    assert_eq!(8, MemoryUsage::size_of_val(&p, &mut BTreeSet::new()));
+    assert_size_of_val_eq!(8, Padding { x: 1, y: 2, z: 3 });
 }
 
 #[test]
 fn test_enum() {
+    #[derive(MemoryUsage)]
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
     #[derive(MemoryUsage)]
     enum Things {
         A,
@@ -74,5 +84,20 @@ fn test_enum() {
         D { x: i32 },
         E(i32, i32),
         F { x: i32, y: i32 },
+        Points(Vec<Point>),
     }
+
+    assert_size_of_val_eq!(32, Things::A);
+    assert_size_of_val_eq!(32, Things::B());
+    assert_size_of_val_eq!(32, Things::C(1));
+    assert_size_of_val_eq!(32, Things::D { x: 1 });
+    assert_size_of_val_eq!(32, Things::E(1, 2));
+    assert_size_of_val_eq!(32, Things::F { x: 1, y: 2 });
+
+    assert_size_of_val_eq!(8, Point { x: 1, y: 2 });
+    assert_size_of_val_eq!(40, vec![Point { x: 1, y: 2 }, Point { x: 3, y: 4 }]);
+    assert_size_of_val_eq!(
+        48,
+        Things::Points(vec![Point { x: 1, y: 2 }, Point { x: 3, y: 4 }])
+    );
 }
