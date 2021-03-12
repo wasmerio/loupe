@@ -50,7 +50,11 @@ fn derive_memory_usage_for_struct(
     let where_clause = &generics.where_clause;
 
     let sum = join_fold(
+        // Check all fields of the `struct`.
         match &data.fields {
+            // Field has the form:
+            //
+            //     F { x, y }
             Fields::Named(ref fields) => fields
                 .named
                 .iter()
@@ -64,8 +68,14 @@ fn derive_memory_usage_for_struct(
                 })
                 .collect(),
 
+            // Field has the form:
+            //
+            //     F
             Fields::Unit => vec![],
 
+            // Field has the form:
+            //
+            //     F(x, y)
             Fields::Unnamed(ref fields) => (0..(fields.unnamed.iter().count()))
                 .into_iter()
                 .map(|field| {
@@ -81,6 +91,7 @@ fn derive_memory_usage_for_struct(
         quote! { 0 },
     );
 
+    // Implement the `MemoryUsage` trait for `struct_name`.
     (quote! {
         #[allow(dead_code)]
         impl < #lifetimes_and_generics > MemoryUsage for #struct_name < #lifetimes_and_generics >
@@ -95,7 +106,7 @@ fn derive_memory_usage_for_struct(
 }
 
 fn derive_memory_usage_for_enum(
-    struct_name: &Ident,
+    enum_name: &Ident,
     data: &DataEnum,
     generics: &Generics,
 ) -> TokenStream {
@@ -109,8 +120,28 @@ fn derive_memory_usage_for_enum(
                 let ident = &variant.ident;
                 let span = ident.span();
 
+                // Check all the variants of the `enum`.
+                //
+                // We want to generate something like this:
+                //
+                //     Self::Variant ... => { ... }
+                //           ^^^^^^^ ^^^      ^^^
+                //           |       |        |
+                //           |       |        given by the `sum` variable
+                //           |       given by the `pattern` variable
+                //           given by the `ident` variable
+                //
+                // Let's compute the `pattern` and `sum` parts.
                 let (pattern, sum) = match variant.fields {
+                    // Variant has the form:
+                    //
+                    //     V { x, y }
+                    //
+                    // We want to generate:
+                    //
+                    //     Self::V { x, y } => { /* memory usage of x + y */ }
                     Fields::Named(ref fields) => {
+                        // Collect the identifiers.
                         let identifiers = fields.named.iter().map(|field| {
                             let ident = field.ident.as_ref().unwrap();
                             let span = ident.span();
@@ -118,61 +149,106 @@ fn derive_memory_usage_for_enum(
                             quote_spanned!(span => #ident)
                         });
 
-                        let pattern =
-                            join_fold(
+                        // Generate the `pattern` part.
+                        let pattern = {
+                            let pattern = join_fold(
                                 identifiers.clone(),
                                 |x, y| quote! { #x , #y },
                                 quote! {}
                             );
 
-                        let sum = join_fold(
-                            identifiers.map(|ident| quote! { MemoryUsage::size_of_val(#ident, visited) - std::mem::size_of_val(#ident) }),
-                            |x, y| quote! { #x + #y },
-                            quote! { 0 },
-                        );
+                            quote! { { #pattern } }
+                        };
 
-                        (quote! { { #pattern } }, quote! { #sum })
+                        // Generate the `sum` part.
+                        let sum = {
+                            let sum = join_fold(
+                                identifiers.map(|ident| quote! { MemoryUsage::size_of_val(#ident, visited) - std::mem::size_of_val(#ident) }),
+                                |x, y| quote! { #x + #y },
+                                quote! { 0 },
+                            );
+
+                            quote! { #sum }
+                        };
+
+                        (pattern, sum)
                     }
 
-                    Fields::Unit => (quote! {}, quote! { 0 }),
+                    // Variant has the form:
+                    //
+                    //     V
+                    //
+                    // We want to generate:
+                    //
+                    //     Self::V => { 0 }
+                    Fields::Unit => {
+                        let pattern = quote! {};
+                        let sum = quote! { 0 };
 
+                        (pattern, sum)
+                    },
+
+                    // Variant has the form:
+                    //
+                    //     V(x, y)
+                    //
+                    // We want to generate:
+                    //
+                    //     Self::V(x, y) => { /* memory usage of x + y */ }
                     Fields::Unnamed(ref fields) => {
+                        // Collect the identifiers. They are unnamed,
+                        // so let's use the `xi` convention where `i`
+                        // is the identifier index.
                         let identifiers =
                             (0..(fields.unnamed.iter().count()))
                             .into_iter()
                             .map(|field| {
                                 let ident = Index::from(field);
-                                let ident = format_ident!("value{}", ident);
+                                let ident = format_ident!("x{}", ident);
 
                                 quote! { #ident }
                             });
 
-                        let pattern =
-                            join_fold(
+                        // Generate the `pattern` part.
+                        let pattern = {
+                            let pattern = join_fold(
                                 identifiers.clone(),
                                 |x, y| quote! { #x , #y },
                                 quote! {}
                             );
 
-                        let sum = join_fold(
-                            identifiers.map(|ident| quote! { MemoryUsage::size_of_val(#ident, visited) - std::mem::size_of_val(#ident) }),
-                            |x, y| quote! { #x + #y },
-                            quote! { 0 },
-                        );
-                        (quote! { ( #pattern ) }, quote! { #sum })
+                            quote! { ( #pattern ) }
+                        };
+
+                        // Generate the `sum` part.
+                        let sum = {
+                            let sum = join_fold(
+                                identifiers.map(|ident| quote! { MemoryUsage::size_of_val(#ident, visited) - std::mem::size_of_val(#ident) }),
+                                |x, y| quote! { #x + #y },
+                                quote! { 0 },
+                            );
+
+                            quote! { #sum }
+                        };
+
+                        (pattern, sum)
                     }
                 };
 
-                quote_spanned! { span=> Self::#ident#pattern => #sum }
+                // At this step, `pattern` and `sum` are well
+                // defined. Let's generate the full arm for the
+                // `match` statement.
+                quote_spanned! { span => Self::#ident#pattern => #sum }
             }
         ),
         |x, y| quote! { #x , #y },
         quote! {},
     );
 
+    // Implement the `MemoryUsage` trait for `enum_name`.
     (quote! {
         #[allow(dead_code)]
-        impl < #lifetimes_and_generics > MemoryUsage for #struct_name < #lifetimes_and_generics >
+        impl < #lifetimes_and_generics > MemoryUsage for #enum_name < #lifetimes_and_generics >
         #where_clause
         {
             fn size_of_val(&self, visited: &mut MemoryUsageVisited) -> usize {
