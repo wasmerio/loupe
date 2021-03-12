@@ -76,10 +76,12 @@ fn derive_memory_usage_for_struct(
             // Field has the form:
             //
             //     F(x, y)
-            Fields::Unnamed(ref fields) => (0..(fields.unnamed.iter().count()))
-                .into_iter()
-                .map(|field| {
-                    let ident = Index::from(field);
+            Fields::Unnamed(ref fields) => fields
+                .unnamed
+                .iter()
+                .enumerate()
+                .map(|(nth, _field)| {
+                    let ident = Index::from(nth);
 
                     quote! { MemoryUsage::size_of_val(&self.#ident, visited) - std::mem::size_of_val(&self.#ident) }
                 })
