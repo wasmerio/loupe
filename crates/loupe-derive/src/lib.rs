@@ -143,7 +143,7 @@ fn derive_memory_usage_for_enum(
                     //     Self::V { x, y } => { /* memory usage of x + y */ }
                     Fields::Named(ref fields) => {
                         // Collect the identifiers.
-                        let identifiers = fields.named.iter().map(|field| {
+                        let mut identifiers = fields.named.iter().map(|field| {
                             let ident = field.ident.as_ref().unwrap();
                             let span = ident.span();
 
@@ -153,7 +153,7 @@ fn derive_memory_usage_for_enum(
                         // Generate the `pattern` part.
                         let pattern = {
                             let pattern = join_fold(
-                                identifiers.clone(),
+                                identifiers.by_ref(),
                                 |x, y| quote! { #x , #y },
                                 quote! {}
                             );
