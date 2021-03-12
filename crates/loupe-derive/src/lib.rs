@@ -164,7 +164,9 @@ fn derive_memory_usage_for_enum(
                         // Generate the `sum` part.
                         let sum = {
                             let sum = join_fold(
-                                identifiers.map(|ident| quote! { MemoryUsage::size_of_val(#ident, visited) - std::mem::size_of_val(#ident) }),
+                                identifiers.map(|ident| quote! {
+                                    MemoryUsage::size_of_val(#ident, visited) - std::mem::size_of_val(#ident)
+                                }),
                                 |x, y| quote! { #x + #y },
                                 quote! { 0 },
                             );
@@ -200,12 +202,12 @@ fn derive_memory_usage_for_enum(
                         // Collect the identifiers. They are unnamed,
                         // so let's use the `xi` convention where `i`
                         // is the identifier index.
-                        let identifiers =
-                            (0..(fields.unnamed.iter().count()))
-                            .into_iter()
-                            .map(|field| {
-                                let ident = Index::from(field);
-                                let ident = format_ident!("x{}", ident);
+                        let mut identifiers = fields
+                            .unnamed
+                            .iter()
+                            .enumerate()
+                            .map(|(nth, _field)| {
+                                let ident = format_ident!("x{}", Index::from(nth));
 
                                 quote! { #ident }
                             });
@@ -213,7 +215,7 @@ fn derive_memory_usage_for_enum(
                         // Generate the `pattern` part.
                         let pattern = {
                             let pattern = join_fold(
-                                identifiers.clone(),
+                                identifiers.by_ref(),
                                 |x, y| quote! { #x , #y },
                                 quote! {}
                             );
@@ -224,7 +226,9 @@ fn derive_memory_usage_for_enum(
                         // Generate the `sum` part.
                         let sum = {
                             let sum = join_fold(
-                                identifiers.map(|ident| quote! { MemoryUsage::size_of_val(#ident, visited) - std::mem::size_of_val(#ident) }),
+                                identifiers.map(|ident| quote! {
+                                    MemoryUsage::size_of_val(#ident, visited) - std::mem::size_of_val(#ident)
+                                }),
                                 |x, y| quote! { #x + #y },
                                 quote! { 0 },
                             );
