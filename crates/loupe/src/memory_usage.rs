@@ -1,4 +1,14 @@
+#[cfg(test)]
+use std::collections::BTreeSet;
 use std::mem;
+
+pub const POINTER_BYTE_SIZE: usize = if cfg!(target_pointer_width = "16") {
+    2
+} else if cfg!(target_pointer_width = "32") {
+    4
+} else {
+    8
+};
 
 pub trait MemoryUsageTracker {
     /// When first called on a given address returns true, else returns false.
@@ -25,8 +35,18 @@ pub trait MemoryUsage {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize;
 }
 
-/// Primitive types
-macro_rules! impl_memory_usage_for {
+#[cfg(test)]
+macro_rules! assert_size_of_val_eq {
+    ($value:expr, $expected:expr) => {
+        assert_eq!(
+            MemoryUsage::size_of_val(&$value, &mut BTreeSet::new()),
+            $expected
+        );
+    };
+}
+
+// Primitive types
+macro_rules! impl_memory_usage_for_primitive {
     ( $type:ty ) => {
         impl MemoryUsage for $type {
             fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
@@ -36,11 +56,48 @@ macro_rules! impl_memory_usage_for {
     };
 
     ( $( $type:ty ),+ ) => {
-        $( impl_memory_usage_for!( $type ); )+
+        $( impl_memory_usage_for_primitive!( $type ); )+
     }
 }
 
-impl_memory_usage_for!(bool, char, f32, f64, i8, i16, i32, i64, isize, u8, u16, u32, u64, usize);
+impl_memory_usage_for_primitive!(
+    bool, char, f32, f64, i8, i16, i32, i64, isize, u8, u16, u32, u64, usize
+);
+
+#[cfg(test)]
+mod test_primitive_types {
+    use super::*;
+
+    macro_rules! test_memory_usage_for_primitive {
+        ($test_name:ident: ($value:expr) == $expected:expr) => {
+            #[test]
+            fn $test_name() {
+                assert_size_of_val_eq!($value, $expected);
+            }
+        };
+
+        ( $( $test_name:ident: ($value:expr) == $expected:expr );+ $(;)* ) => {
+            $( test_memory_usage_for_primitive!( $test_name: ($value) == $expected); )+
+        }
+    }
+
+    test_memory_usage_for_primitive!(
+        test_bool: (true) == 1;
+        test_char: ('a') == 4;
+        test_f32: (4.2f32) == 4;
+        test_f64: (4.2f64) == 8;
+        test_i8: (1i8) == 1;
+        test_i16: (1i16) == 2;
+        test_i32: (1i32) == 4;
+        test_i64: (1i64) == 8;
+        test_isize: (1isize) == POINTER_BYTE_SIZE;
+        test_u8: (1u8) == 1;
+        test_u16: (1u16) == 2;
+        test_u32: (1u32) == 4;
+        test_u64: (1u64) == 8;
+        test_usize: (1usize) == POINTER_BYTE_SIZE;
+    );
+}
 
 // pointer
 // Pointers aren't necessarily safe to dereference, even if they're nonnull.
@@ -65,6 +122,21 @@ impl<T: MemoryUsage> MemoryUsage for &mut T {
             } else {
                 0
             }
+    }
+}
+
+#[cfg(test)]
+mod test_reference_types {
+    use super::*;
+
+    #[test]
+    fn test_reference() {
+        assert_size_of_val_eq!(&1i8, POINTER_BYTE_SIZE + 1);
+    }
+
+    #[test]
+    fn test_mutable_reference() {
+        assert_size_of_val_eq!(&mut 1i8, POINTER_BYTE_SIZE + 1);
     }
 }
 
