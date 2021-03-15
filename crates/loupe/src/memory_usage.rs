@@ -355,16 +355,12 @@ mod test_tuple_types {
 
 // Standard library types
 
-// TODO: Arc
-
 // Box types.
 impl<T: MemoryUsage> MemoryUsage for Box<T> {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self) + self.as_ref().size_of_val(tracker)
     }
 }
-
-// TODO: Implement for `Box<[T]>`.
 
 #[cfg(test)]
 mod test_box_types {
@@ -388,16 +384,6 @@ mod test_box_types {
         );
     }
 }
-
-// Cell
-
-// Is a Pin always dereferenceable?
-//impl<T: MemoryUsage> MemoryUsage for Pin<T> {
-//}
-
-// TODO: Mutex
-
-// TODO: NonNull might be possible when '*const T' is MemoryUsage.
 
 // Option types.
 impl<T: MemoryUsage> MemoryUsage for Option<T> {
@@ -467,17 +453,6 @@ mod test_result_types {
     }
 }
 
-// TODO: Rc
-
-// TODO: Ref, RefCell, RefMut
-
-//impl<T: MemoryUsage, E: MemoryUsage> MemoryUsage for Result<T, E> {
-//}
-
-// TODO: RwLock
-
-// TODO: UnsafeCell
-
 // Vector types.
 impl<T: MemoryUsage> MemoryUsage for Vec<T> {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
@@ -514,7 +489,21 @@ impl<T> MemoryUsage for std::marker::PhantomData<T> {
     }
 }
 
-// TODO: PhantomPinned?
+// TODO:
+//
+// * Box<[T]>
+// * Cell
+// * Arc
+// * Pin (is a Pin always referenceable?)
+// * Mutex
+// * NonNull (might be possible when '*const T' is MemoryUsage)
+// * Rc
+// * Ref
+// * RefCell
+// * RefMut
+// * RwLock
+// * UnsafeCell
+// * PhantomPinned
 
 #[cfg(test)]
 mod tests {
