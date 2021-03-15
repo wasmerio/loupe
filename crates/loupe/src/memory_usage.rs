@@ -12,17 +12,17 @@ pub const POINTER_BYTE_SIZE: usize = if cfg!(target_pointer_width = "16") {
 
 pub trait MemoryUsageTracker {
     /// When first called on a given address returns true, else returns false.
-    fn track_or_exist(&mut self, address: *const ()) -> bool;
+    fn track(&mut self, address: *const ()) -> bool;
 }
 
 impl MemoryUsageTracker for std::collections::BTreeSet<*const ()> {
-    fn track_or_exist(&mut self, address: *const ()) -> bool {
+    fn track(&mut self, address: *const ()) -> bool {
         self.insert(address)
     }
 }
 
 impl MemoryUsageTracker for std::collections::HashSet<*const ()> {
-    fn track_or_exist(&mut self, address: *const ()) -> bool {
+    fn track(&mut self, address: *const ()) -> bool {
         self.insert(address)
     }
 }
@@ -102,11 +102,11 @@ mod test_primitive_types {
 // pointer
 // Pointers aren't necessarily safe to dereference, even if they're nonnull.
 
-// references
+// Reference types.
 impl<T: MemoryUsage> MemoryUsage for &T {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
-            + if tracker.track_or_exist(*self as *const T as *const ()) {
+            + if tracker.track(*self as *const T as *const ()) {
                 MemoryUsage::size_of_val(*self, tracker)
             } else {
                 0
@@ -117,7 +117,7 @@ impl<T: MemoryUsage> MemoryUsage for &T {
 impl<T: MemoryUsage> MemoryUsage for &mut T {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
-            + if tracker.track_or_exist(*self as *const T as *const ()) {
+            + if tracker.track(*self as *const T as *const ()) {
                 MemoryUsage::size_of_val(*self, tracker)
             } else {
                 0
