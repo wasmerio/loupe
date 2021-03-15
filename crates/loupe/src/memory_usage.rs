@@ -35,6 +35,13 @@ pub trait MemoryUsage {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize;
 }
 
+// Empty type.
+impl MemoryUsage for () {
+    fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
+        0
+    }
+}
+
 #[cfg(test)]
 macro_rules! assert_size_of_val_eq {
     ($value:expr, $expected:expr) => {
