@@ -232,6 +232,12 @@ impl MemoryUsage for &str {
     }
 }
 
+impl MemoryUsage for String {
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
+        self.as_str().size_of_val(tracker)
+    }
+}
+
 #[cfg(test)]
 mod test_string_types {
     use super::*;
@@ -251,6 +257,24 @@ mod test_string_types {
         assert_size_of_val_eq!(string, 2 * POINTER_BYTE_SIZE + 1 * 3);
 
         let string: &str = "…";
+        assert_size_of_val_eq!(string, 2 * POINTER_BYTE_SIZE + 1 * 3);
+    }
+
+    #[test]
+    fn test_string() {
+        let string: String = "".to_string();
+        assert_size_of_val_eq!(string, 2 * POINTER_BYTE_SIZE + 1 * 0);
+
+        let string: String = "a".to_string();
+        assert_size_of_val_eq!(string, 2 * POINTER_BYTE_SIZE + 1 * 1);
+
+        let string: String = "ab".to_string();
+        assert_size_of_val_eq!(string, 2 * POINTER_BYTE_SIZE + 1 * 2);
+
+        let string: String = "abc".to_string();
+        assert_size_of_val_eq!(string, 2 * POINTER_BYTE_SIZE + 1 * 3);
+
+        let string: String = "…".to_string();
         assert_size_of_val_eq!(string, 2 * POINTER_BYTE_SIZE + 1 * 3);
     }
 }
