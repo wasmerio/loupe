@@ -450,13 +450,33 @@ mod test_option_types {
 
 // TODO: UnsafeCell
 
+// Vector types.
 impl<T: MemoryUsage> MemoryUsage for Vec<T> {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + self
                 .iter()
-                .map(|v| MemoryUsage::size_of_val(v, tracker))
+                .map(|value| value.size_of_val(tracker))
                 .sum::<usize>()
+    }
+}
+
+#[cfg(test)]
+mod test_vec_types {
+    use super::*;
+
+    #[test]
+    fn test_vec() {
+        let empty_vec_size = mem::size_of_val(&Vec::<i8>::new());
+
+        let mut vec: Vec<i8> = Vec::new();
+        assert_size_of_val_eq!(vec, empty_vec_size + 1 * 0);
+
+        vec.push(1);
+        assert_size_of_val_eq!(vec, empty_vec_size + 1 * 1);
+
+        vec.push(2);
+        assert_size_of_val_eq!(vec, empty_vec_size + 1 * 2);
     }
 }
 
@@ -484,53 +504,6 @@ mod tests {
             assert!(self.size_to_report >= mem::size_of::<TestMemoryUsage>());
             self.size_to_report
         }
-    }
-
-    #[test]
-    fn test_ints() {
-        assert_eq!(MemoryUsage::size_of_val(&32, &mut BTreeSet::new()), 4);
-        assert_eq!(32.size_of_val(&mut BTreeSet::new()), 4);
-    }
-
-    #[test]
-    fn test_slice_no_static_size() {
-        {
-            let x: [u8; 13] = [0; 13];
-            let y: &[u8] = &x;
-            assert_eq!(13, mem::size_of_val(y));
-            assert_eq!(13, MemoryUsage::size_of_val(y, &mut BTreeSet::new()));
-        }
-
-        {
-            let mut x: [TestMemoryUsage; 13] = [TestMemoryUsage {
-                size_to_report: mem::size_of::<TestMemoryUsage>(),
-            }; 13];
-            x[0].size_to_report += 7;
-            let y: &[TestMemoryUsage] = &x;
-            assert_eq!(13 * mem::size_of::<TestMemoryUsage>(), mem::size_of_val(y));
-            assert_eq!(
-                13 * mem::size_of::<TestMemoryUsage>() + 7,
-                MemoryUsage::size_of_val(y, &mut BTreeSet::new())
-            );
-        }
-    }
-
-    #[test]
-    fn test_vecs() {
-        let mut x = vec![];
-        let empty_vec_size = mem::size_of_val(&x);
-        let tmu_size = mem::size_of::<TestMemoryUsage>();
-        x.push(TestMemoryUsage {
-            size_to_report: tmu_size + 3,
-        });
-        x.push(TestMemoryUsage {
-            size_to_report: tmu_size + 7,
-        });
-        assert_eq!(empty_vec_size, mem::size_of_val(&x));
-        assert_eq!(
-            empty_vec_size + 2 * tmu_size + 3 + 7,
-            MemoryUsage::size_of_val(&x, &mut BTreeSet::new())
-        );
     }
 
     #[test]
