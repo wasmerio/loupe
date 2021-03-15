@@ -132,15 +132,17 @@ mod test_reference_types {
     #[test]
     fn test_reference() {
         assert_size_of_val_eq!(&1i8, POINTER_BYTE_SIZE + 1);
+        assert_size_of_val_eq!(&1i64, POINTER_BYTE_SIZE + 8);
     }
 
     #[test]
     fn test_mutable_reference() {
         assert_size_of_val_eq!(&mut 1i8, POINTER_BYTE_SIZE + 1);
+        assert_size_of_val_eq!(&mut 1i64, POINTER_BYTE_SIZE + 8);
     }
 }
 
-// slices
+// Slice types.
 impl<T: MemoryUsage> MemoryUsage for [T] {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
@@ -148,6 +150,44 @@ impl<T: MemoryUsage> MemoryUsage for [T] {
                 .iter()
                 .map(|v| MemoryUsage::size_of_val(v, tracker) - mem::size_of_val(v))
                 .sum::<usize>()
+    }
+}
+
+impl<T: MemoryUsage> MemoryUsage for &[T] {
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
+        mem::size_of_val(self)
+            + if tracker.track(*self as *const [T] as *const ()) {
+                MemoryUsage::size_of_val(*self, tracker)
+            } else {
+                0
+            }
+    }
+}
+
+#[cfg(test)]
+mod test_slice_types {
+    use super::*;
+
+    #[test]
+    fn test_slice() {
+        assert_size_of_val_eq!([1i16], 2 * 1);
+        assert_size_of_val_eq!([1i16, 2], 2 * 2);
+        assert_size_of_val_eq!([1i16, 2, 3], 2 * 3);
+    }
+
+    #[test]
+    fn test_slice_dynamically_sized() {
+        let slice: &[i16] = &[];
+        assert_size_of_val_eq!(slice, 2 * POINTER_BYTE_SIZE + 2 * 0);
+
+        let slice: &[i16] = &[1];
+        assert_size_of_val_eq!(slice, 2 * POINTER_BYTE_SIZE + 2 * 1);
+
+        let slice: &[i16] = &[1, 2];
+        assert_size_of_val_eq!(slice, 2 * POINTER_BYTE_SIZE + 2 * 2);
+
+        let slice: &[i16] = &[1, 2, 3];
+        assert_size_of_val_eq!(slice, 2 * POINTER_BYTE_SIZE + 2 * 3);
     }
 }
 
