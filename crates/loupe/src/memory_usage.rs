@@ -511,7 +511,7 @@ mod test_vec_types {
 }
 
 // Arc types.
-impl<T: MemoryUsage> MemoryUsage for Arc<T> {
+impl<T: MemoryUsage + ?Sized> MemoryUsage for Arc<T> {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self) + self.as_ref().size_of_val(tracker)
     }
