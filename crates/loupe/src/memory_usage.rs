@@ -225,14 +225,35 @@ mod test_array_types {
     }
 }
 
-// strs
-/*
-impl MemoryUsage for str {
-    fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
-        self.as_bytes().size_of()
+// String types.
+impl MemoryUsage for &str {
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
+        mem::size_of_val(self) + self.as_bytes().size_of_val(tracker)
     }
 }
-*/
+
+#[cfg(test)]
+mod test_string_types {
+    use super::*;
+
+    #[test]
+    fn test_str() {
+        let string: &str = "";
+        assert_size_of_val_eq!(string, 2 * POINTER_BYTE_SIZE + 1 * 0);
+
+        let string: &str = "a";
+        assert_size_of_val_eq!(string, 2 * POINTER_BYTE_SIZE + 1 * 1);
+
+        let string: &str = "ab";
+        assert_size_of_val_eq!(string, 2 * POINTER_BYTE_SIZE + 1 * 2);
+
+        let string: &str = "abc";
+        assert_size_of_val_eq!(string, 2 * POINTER_BYTE_SIZE + 1 * 3);
+
+        let string: &str = "…";
+        assert_size_of_val_eq!(string, 2 * POINTER_BYTE_SIZE + 1 * 3);
+    }
+}
 
 // TODO: tuples
 
