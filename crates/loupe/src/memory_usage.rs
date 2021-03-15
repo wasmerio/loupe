@@ -481,6 +481,32 @@ mod test_vec_types {
         vec.push(2);
         assert_size_of_val_eq!(vec, empty_vec_size + 1 * 2);
     }
+
+    #[test]
+    fn test_vec_not_unique() {
+        let empty_vec_size = mem::size_of_val(&Vec::<&i32>::new());
+
+        let mut vec: Vec<&i32> = Vec::new();
+        assert_size_of_val_eq!(vec, empty_vec_size);
+
+        let one: i32 = 1;
+        vec.push(&one);
+        assert_size_of_val_eq!(vec, empty_vec_size + POINTER_BYTE_SIZE + 4);
+
+        let two: i32 = 2;
+        vec.push(&two);
+        assert_size_of_val_eq!(
+            vec,
+            empty_vec_size + POINTER_BYTE_SIZE + 4 + POINTER_BYTE_SIZE + 4
+        );
+
+        // Push a reference to an item that already exists!
+        vec.push(&one);
+        assert_size_of_val_eq!(
+            vec,
+            empty_vec_size + POINTER_BYTE_SIZE + 4 + POINTER_BYTE_SIZE + 4 + POINTER_BYTE_SIZE + 0 /* no string content */
+        );
+    }
 }
 
 impl<T> MemoryUsage for std::marker::PhantomData<T> {
@@ -504,51 +530,3 @@ impl<T> MemoryUsage for std::marker::PhantomData<T> {
 // * RwLock
 // * UnsafeCell
 // * PhantomPinned
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::collections::BTreeSet;
-
-    #[derive(Copy, Clone)]
-    struct TestMemoryUsage {
-        // Must be greater than or equal to mem::size_of::<TestMemoryUsage>() or else MemoryUsage may overflow.
-        pub size_to_report: usize,
-    }
-    impl MemoryUsage for TestMemoryUsage {
-        fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
-            // Try to prevent buggy tests before they're hard to debug.
-            assert!(self.size_to_report >= mem::size_of::<TestMemoryUsage>());
-            self.size_to_report
-        }
-    }
-
-    #[test]
-    fn test_double_counting() {
-        let tmu_size = mem::size_of::<TestMemoryUsage>();
-        let x = TestMemoryUsage {
-            size_to_report: tmu_size + 7,
-        };
-        let y = TestMemoryUsage {
-            size_to_report: tmu_size + 7,
-        };
-        let mut v = vec![];
-        let empty_vec_size = mem::size_of_val(&v);
-        v.push(&x);
-        assert_eq!(
-            empty_vec_size + 1 * mem::size_of_val(&x) + 1 * (tmu_size + 7),
-            MemoryUsage::size_of_val(&v, &mut BTreeSet::new())
-        );
-        v.push(&x);
-        assert_eq!(
-            empty_vec_size + 2 * mem::size_of_val(&x) + 1 * (tmu_size + 7),
-            MemoryUsage::size_of_val(&v, &mut BTreeSet::new())
-        );
-        v.push(&y);
-        assert_eq!(mem::size_of_val(&x), mem::size_of_val(&y));
-        assert_eq!(
-            empty_vec_size + 3 * mem::size_of_val(&x) + 2 * (tmu_size + 7),
-            MemoryUsage::size_of_val(&v, &mut BTreeSet::new())
-        );
-    }
-}
