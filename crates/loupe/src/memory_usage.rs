@@ -148,7 +148,7 @@ impl<T: MemoryUsage> MemoryUsage for [T] {
         mem::size_of_val(self)
             + self
                 .iter()
-                .map(|v| MemoryUsage::size_of_val(v, tracker) - mem::size_of_val(v))
+                .map(|value| value.size_of_val(tracker) - mem::size_of_val(value))
                 .sum::<usize>()
     }
 }
@@ -197,7 +197,7 @@ impl<T: MemoryUsage, const N: usize> MemoryUsage for [T; N] {
         mem::size_of_val(self)
             + self
                 .iter()
-                .map(|v| MemoryUsage::size_of_val(v, tracker) - mem::size_of_val(v))
+                .map(|value| value.size_of_val(tracker) - mem::size_of_val(value))
                 .sum::<usize>()
     }
 }
