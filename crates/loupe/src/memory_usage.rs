@@ -191,7 +191,7 @@ mod test_slice_types {
     }
 }
 
-// arrays
+// Array types.
 impl<T: MemoryUsage, const N: usize> MemoryUsage for [T; N] {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
@@ -199,6 +199,29 @@ impl<T: MemoryUsage, const N: usize> MemoryUsage for [T; N] {
                 .iter()
                 .map(|v| MemoryUsage::size_of_val(v, tracker) - mem::size_of_val(v))
                 .sum::<usize>()
+    }
+}
+
+#[cfg(test)]
+mod test_array_types {
+    use super::*;
+
+    #[test]
+    fn test_array() {
+        let array: [i16; 0] = [0; 0];
+        assert_size_of_val_eq!(array, 2 * 0);
+
+        let array: [i16; 1] = [0; 1];
+        assert_size_of_val_eq!(array, 2 * 1);
+
+        let array: [i16; 2] = [0; 2];
+        assert_size_of_val_eq!(array, 2 * 2);
+
+        let array: [i16; 3] = [0; 3];
+        assert_size_of_val_eq!(array, 2 * 3);
+
+        let array: [[i16; 3]; 5] = [[0; 3]; 5];
+        assert_size_of_val_eq!(array, 2 * 3 * 5);
     }
 }
 
@@ -293,13 +316,6 @@ mod tests {
     fn test_ints() {
         assert_eq!(MemoryUsage::size_of_val(&32, &mut BTreeSet::new()), 4);
         assert_eq!(32.size_of_val(&mut BTreeSet::new()), 4);
-    }
-
-    #[test]
-    fn test_arrays() {
-        let x: [[u8; 7]; 13] = [[0; 7]; 13];
-        assert_eq!(7 * 13, mem::size_of_val(&x));
-        assert_eq!(7 * 13, MemoryUsage::size_of_val(&x, &mut BTreeSet::new()));
     }
 
     #[test]
