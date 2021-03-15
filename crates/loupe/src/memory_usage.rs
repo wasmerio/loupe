@@ -1,6 +1,7 @@
 #[cfg(test)]
 use std::collections::BTreeSet;
 use std::mem;
+use std::sync::Arc;
 
 pub const POINTER_BYTE_SIZE: usize = if cfg!(target_pointer_width = "16") {
     2
@@ -509,6 +510,29 @@ mod test_vec_types {
     }
 }
 
+// Arc types.
+impl<T: MemoryUsage> MemoryUsage for Arc<T> {
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
+        mem::size_of_val(self) + self.as_ref().size_of_val(tracker)
+    }
+}
+
+#[cfg(test)]
+mod test_arc_types {
+    use super::*;
+
+    #[test]
+    fn test_arc() {
+        let empty_arc_size = mem::size_of_val(&Arc::new(()));
+
+        let arc: Arc<i32> = Arc::new(1);
+        assert_size_of_val_eq!(arc, empty_arc_size + 4);
+
+        let arc: Arc<Option<i32>> = Arc::new(Some(1));
+        assert_size_of_val_eq!(arc, empty_arc_size + POINTER_BYTE_SIZE + 4);
+    }
+}
+
 impl<T> MemoryUsage for std::marker::PhantomData<T> {
     fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
         0
@@ -519,7 +543,6 @@ impl<T> MemoryUsage for std::marker::PhantomData<T> {
 //
 // * Box<[T]>
 // * Cell
-// * Arc
 // * Pin (is a Pin always referenceable?)
 // * Mutex
 // * NonNull (might be possible when '*const T' is MemoryUsage)
