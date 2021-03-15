@@ -1,7 +1,8 @@
+use std::borrow::Borrow;
 #[cfg(test)]
 use std::collections::BTreeSet;
 use std::mem;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub const POINTER_BYTE_SIZE: usize = if cfg!(target_pointer_width = "16") {
     2
@@ -510,15 +511,21 @@ mod test_vec_types {
     }
 }
 
-// Arc types.
+// Sync types.
 impl<T: MemoryUsage + ?Sized> MemoryUsage for Arc<T> {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self) + self.as_ref().size_of_val(tracker)
     }
 }
 
+impl<T: MemoryUsage + ?Sized> MemoryUsage for Mutex<T> {
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
+        mem::size_of_val(self) + self.lock().unwrap().size_of_val(tracker)
+    }
+}
+
 #[cfg(test)]
-mod test_arc_types {
+mod test_sync_types {
     use super::*;
 
     #[test]
@@ -531,7 +538,20 @@ mod test_arc_types {
         let arc: Arc<Option<i32>> = Arc::new(Some(1));
         assert_size_of_val_eq!(arc, empty_arc_size + POINTER_BYTE_SIZE + 4);
     }
+
+    #[test]
+    fn test_mutex() {
+        let empty_mutex_size = mem::size_of_val(&Mutex::new(()));
+
+        let mutex: Mutex<i32> = Mutex::new(1);
+        assert_size_of_val_eq!(mutex, empty_mutex_size + 4);
+
+        let mutex: Mutex<Option<i32>> = Mutex::new(Some(1));
+        assert_size_of_val_eq!(mutex, empty_mutex_size + 2 * POINTER_BYTE_SIZE + 4);
+    }
 }
+
+// Mutex types.
 
 impl<T> MemoryUsage for std::marker::PhantomData<T> {
     fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
@@ -544,7 +564,6 @@ impl<T> MemoryUsage for std::marker::PhantomData<T> {
 // * Box<[T]>
 // * Cell
 // * Pin (is a Pin always referenceable?)
-// * Mutex
 // * NonNull (might be possible when '*const T' is MemoryUsage)
 // * Rc
 // * Ref
