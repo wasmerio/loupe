@@ -1,3 +1,3 @@
-mod r#trait;
+mod memory_usage;
 
-pub use r#trait::{MemoryUsage, MemoryUsageVisited};
+pub use memory_usage::{MemoryUsage, MemoryUsageTracker};

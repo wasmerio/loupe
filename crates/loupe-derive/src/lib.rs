@@ -98,7 +98,7 @@ fn derive_memory_usage_for_struct(
         impl < #lifetimes_and_generics > MemoryUsage for #struct_name < #lifetimes_and_generics >
         #where_clause
         {
-            fn size_of_val(&self, visited: &mut MemoryUsageVisited) -> usize {
+            fn size_of_val(&self, visited: &mut MemoryUsageTracker) -> usize {
                 std::mem::size_of_val(self) + #sum
             }
         }
@@ -256,7 +256,7 @@ fn derive_memory_usage_for_enum(
         impl < #lifetimes_and_generics > MemoryUsage for #enum_name < #lifetimes_and_generics >
         #where_clause
         {
-            fn size_of_val(&self, visited: &mut MemoryUsageVisited) -> usize {
+            fn size_of_val(&self, visited: &mut MemoryUsageTracker) -> usize {
                 std::mem::size_of_val(self) + match self {
                     #match_arms
                 }

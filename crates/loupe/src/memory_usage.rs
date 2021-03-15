@@ -1,18 +1,18 @@
 use std::mem;
 
-pub trait MemoryUsageVisited {
+pub trait MemoryUsageTracker {
     /// When first called on a given address returns true, else returns false.
-    fn insert(&mut self, address: *const ()) -> bool;
+    fn track_or_exist(&mut self, address: *const ()) -> bool;
 }
 
-impl MemoryUsageVisited for std::collections::BTreeSet<*const ()> {
-    fn insert(&mut self, address: *const ()) -> bool {
+impl MemoryUsageTracker for std::collections::BTreeSet<*const ()> {
+    fn track_or_exist(&mut self, address: *const ()) -> bool {
         self.insert(address)
     }
 }
 
-impl MemoryUsageVisited for std::collections::HashSet<*const ()> {
-    fn insert(&mut self, address: *const ()) -> bool {
+impl MemoryUsageTracker for std::collections::HashSet<*const ()> {
+    fn track_or_exist(&mut self, address: *const ()) -> bool {
         self.insert(address)
     }
 }
@@ -22,14 +22,14 @@ pub trait MemoryUsage {
     ///
     /// Recursively visits the value and any children returning the sum of their
     /// sizes. The size always includes any tail padding if applicable.
-    fn size_of_val(&self, visited: &mut dyn MemoryUsageVisited) -> usize;
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize;
 }
 
 /// Primitive types
 macro_rules! impl_memory_usage_for {
     ( $type:ty ) => {
         impl MemoryUsage for $type {
-            fn size_of_val(&self, _: &mut dyn MemoryUsageVisited) -> usize {
+            fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
                 mem::size_of_val(self)
             }
         }
@@ -47,20 +47,21 @@ impl_memory_usage_for!(bool, char, f32, f64, i8, i16, i32, i64, isize, u8, u16, 
 
 // references
 impl<T: MemoryUsage> MemoryUsage for &T {
-    fn size_of_val(&self, visited: &mut dyn MemoryUsageVisited) -> usize {
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
-            + if visited.insert(*self as *const T as *const ()) {
-                MemoryUsage::size_of_val(*self, visited)
+            + if tracker.track_or_exist(*self as *const T as *const ()) {
+                MemoryUsage::size_of_val(*self, tracker)
             } else {
                 0
             }
     }
 }
+
 impl<T: MemoryUsage> MemoryUsage for &mut T {
-    fn size_of_val(&self, visited: &mut dyn MemoryUsageVisited) -> usize {
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
-            + if visited.insert(*self as *const T as *const ()) {
-                MemoryUsage::size_of_val(*self, visited)
+            + if tracker.track_or_exist(*self as *const T as *const ()) {
+                MemoryUsage::size_of_val(*self, tracker)
             } else {
                 0
             }
@@ -69,22 +70,22 @@ impl<T: MemoryUsage> MemoryUsage for &mut T {
 
 // slices
 impl<T: MemoryUsage> MemoryUsage for [T] {
-    fn size_of_val(&self, visited: &mut dyn MemoryUsageVisited) -> usize {
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + self
                 .iter()
-                .map(|v| MemoryUsage::size_of_val(v, visited) - mem::size_of_val(v))
+                .map(|v| MemoryUsage::size_of_val(v, tracker) - mem::size_of_val(v))
                 .sum::<usize>()
     }
 }
 
 // arrays
 impl<T: MemoryUsage, const N: usize> MemoryUsage for [T; N] {
-    fn size_of_val(&self, visited: &mut dyn MemoryUsageVisited) -> usize {
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + self
                 .iter()
-                .map(|v| MemoryUsage::size_of_val(v, visited) - mem::size_of_val(v))
+                .map(|v| MemoryUsage::size_of_val(v, tracker) - mem::size_of_val(v))
                 .sum::<usize>()
     }
 }
@@ -92,7 +93,7 @@ impl<T: MemoryUsage, const N: usize> MemoryUsage for [T; N] {
 // strs
 /*
 impl MemoryUsage for str {
-    fn size_of_val(&self, _: &mut dyn MemoryUsageVisited) -> usize {
+    fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
         self.as_bytes().size_of()
     }
 }
@@ -118,11 +119,11 @@ impl MemoryUsage for str {
 // TODO: NonNull might be possible when '*const T' is MemoryUsage.
 
 impl<T: MemoryUsage> MemoryUsage for Option<T> {
-    fn size_of_val(&self, visited: &mut dyn MemoryUsageVisited) -> usize {
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + self
                 .iter()
-                .map(|v| MemoryUsage::size_of_val(v, visited))
+                .map(|v| MemoryUsage::size_of_val(v, tracker))
                 .sum::<usize>()
     }
 }
@@ -141,17 +142,17 @@ impl<T: MemoryUsage> MemoryUsage for Option<T> {
 // TODO: UnsafeCell
 
 impl<T: MemoryUsage> MemoryUsage for Vec<T> {
-    fn size_of_val(&self, visited: &mut dyn MemoryUsageVisited) -> usize {
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + self
                 .iter()
-                .map(|v| MemoryUsage::size_of_val(v, visited))
+                .map(|v| MemoryUsage::size_of_val(v, tracker))
                 .sum::<usize>()
     }
 }
 
 impl<T> MemoryUsage for std::marker::PhantomData<T> {
-    fn size_of_val(&self, _: &mut dyn MemoryUsageVisited) -> usize {
+    fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
         0
     }
 }
@@ -169,7 +170,7 @@ mod tests {
         pub size_to_report: usize,
     }
     impl MemoryUsage for TestMemoryUsage {
-        fn size_of_val(&self, _: &mut dyn MemoryUsageVisited) -> usize {
+        fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
             // Try to prevent buggy tests before they're hard to debug.
             assert!(self.size_to_report >= mem::size_of::<TestMemoryUsage>());
             self.size_to_report
