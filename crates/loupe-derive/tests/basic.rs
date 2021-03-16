@@ -24,6 +24,38 @@ fn test_struct_flat() {
 }
 
 #[test]
+fn test_struct_field_ignored() {
+    #[derive(MemoryUsage)]
+    struct S {
+        x: Vec<i32>,
+        y: Vec<i32>,
+    }
+
+    #[derive(MemoryUsage)]
+    #[allow(unused)]
+    struct T {
+        x: Vec<i32>,
+        #[memoryusage(ignore)]
+        y: Vec<i32>,
+    }
+
+    assert_size_of_val_eq!(
+        72,
+        S {
+            x: vec![1, 2, 3],
+            y: vec![1, 2, 3]
+        }
+    );
+    assert_size_of_val_eq!(
+        60,
+        T {
+            x: vec![1, 2, 3],
+            y: vec![1, 2, 3]
+        }
+    );
+}
+
+#[test]
 fn test_tuple() {
     #[derive(MemoryUsage)]
     struct Tuple(i32, i32);
@@ -99,5 +131,40 @@ fn test_enum() {
     assert_size_of_val_eq!(
         48,
         Things::Points(vec![Point { x: 1, y: 2 }, Point { x: 3, y: 4 }])
+    );
+}
+
+#[test]
+fn test_enum_variant_ignored() {
+    #[derive(MemoryUsage)]
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    #[derive(MemoryUsage)]
+    enum E {
+        A,
+        Points(Vec<Point>),
+    }
+
+    assert_size_of_val_eq!(24, E::A);
+    assert_size_of_val_eq!(
+        40,
+        E::Points(vec![Point { x: 1, y: 2 }, Point { x: 3, y: 4 }])
+    );
+
+    #[derive(MemoryUsage)]
+    #[allow(unused)]
+    enum F {
+        A,
+        #[memoryusage(ignore)]
+        Points(Vec<Point>),
+    }
+
+    assert_size_of_val_eq!(24, F::A);
+    assert_size_of_val_eq!(
+        24,
+        F::Points(vec![Point { x: 1, y: 2 }, Point { x: 3, y: 4 }])
     );
 }
