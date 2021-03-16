@@ -1,4 +1,4 @@
-use loupe::{MemoryUsage, MemoryUsageTracker};
+use loupe::MemoryUsage;
 use loupe_derive::MemoryUsage;
 
 use std::collections::BTreeSet;
