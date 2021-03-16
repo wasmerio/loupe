@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 #[cfg(test)]
 use std::collections::BTreeSet;
 use std::mem;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 
 pub const POINTER_BYTE_SIZE: usize = if cfg!(target_pointer_width = "16") {
     2
@@ -543,6 +543,12 @@ impl<T: MemoryUsage + ?Sized> MemoryUsage for Mutex<T> {
     }
 }
 
+impl<T: MemoryUsage + ?Sized> MemoryUsage for RwLock<T> {
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
+        mem::size_of_val(self) + self.read().unwrap().size_of_val(tracker)
+    }
+}
+
 #[cfg(test)]
 mod test_sync_types {
     use super::*;
@@ -567,6 +573,17 @@ mod test_sync_types {
 
         let mutex: Mutex<Option<i32>> = Mutex::new(Some(1));
         assert_size_of_val_eq!(mutex, empty_mutex_size + 2 * POINTER_BYTE_SIZE + 4);
+    }
+
+    #[test]
+    fn test_rwlock() {
+        let empty_rwlock_size = mem::size_of_val(&RwLock::new(()));
+
+        let rwlock: RwLock<i32> = RwLock::new(1);
+        assert_size_of_val_eq!(rwlock, empty_rwlock_size + 4);
+
+        let rwlock: RwLock<Option<i32>> = RwLock::new(Some(1));
+        assert_size_of_val_eq!(rwlock, empty_rwlock_size + 2 * POINTER_BYTE_SIZE + 4);
     }
 }
 
