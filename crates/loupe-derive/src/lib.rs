@@ -1,8 +1,10 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote, quote_spanned};
-use syn::{parse, Data, DataEnum, DataStruct, DeriveInput, Fields, Generics, Ident, Index};
+use syn::{
+    parse, Attribute, Data, DataEnum, DataStruct, DeriveInput, Fields, Generics, Ident, Index,
+};
 
-#[proc_macro_derive(MemoryUsage)]
+#[proc_macro_derive(MemoryUsage, attributes(memoryusage))]
 pub fn derive_memory_usage(input: TokenStream) -> TokenStream {
     let derive_input: DeriveInput = parse(input).unwrap();
 
@@ -58,13 +60,17 @@ fn derive_memory_usage_for_struct(
             Fields::Named(ref fields) => fields
                 .named
                 .iter()
-                .map(|field| {
+                .filter_map(|field| {
+                    if must_ignore(&field.attrs) {
+                        return None;
+                    }
+
                     let ident = field.ident.as_ref().unwrap();
                     let span = ident.span();
 
-                    quote_spanned!(
+                    Some(quote_spanned!(
                         span => loupe::MemoryUsage::size_of_val(&self.#ident, visited) - std::mem::size_of_val(&self.#ident)
-                    )
+                    ))
                 })
                 .collect(),
 
@@ -80,10 +86,14 @@ fn derive_memory_usage_for_struct(
                 .unnamed
                 .iter()
                 .enumerate()
-                .map(|(nth, _field)| {
+                .filter_map(|(nth, field)| {
+                    if must_ignore(&field.attrs) {
+                        return None;
+                    }
+
                     let ident = Index::from(nth);
 
-                    quote! { loupe::MemoryUsage::size_of_val(&self.#ident, visited) - std::mem::size_of_val(&self.#ident) }
+                    Some(quote! { loupe::MemoryUsage::size_of_val(&self.#ident, visited) - std::mem::size_of_val(&self.#ident) })
                 })
                 .collect(),
         }
@@ -133,7 +143,7 @@ fn derive_memory_usage_for_enum(
                 //           given by the `ident` variable
                 //
                 // Let's compute the `pattern` and `sum` parts.
-                let (pattern, sum) = match variant.fields {
+                let (pattern, mut sum) = match variant.fields {
                     // Variant has the form:
                     //
                     //     V { x, y }
@@ -240,6 +250,10 @@ fn derive_memory_usage_for_enum(
                     }
                 };
 
+                if must_ignore(&variant.attrs) {
+                    sum = quote! { 0 };
+                }
+
                 // At this step, `pattern` and `sum` are well
                 // defined. Let's generate the full arm for the
                 // `match` statement.
@@ -264,4 +278,14 @@ fn derive_memory_usage_for_enum(
         }
     })
     .into()
+}
+
+fn must_ignore(attrs: &Vec<Attribute>) -> bool {
+    attrs.iter().any(|attr| {
+        attr.path.is_ident("memoryusage")
+            && match attr.parse_args::<Ident>() {
+                Ok(e) if e.to_string() == "ignore" => true,
+                _ => false,
+            }
+    })
 }
