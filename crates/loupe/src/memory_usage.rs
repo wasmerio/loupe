@@ -1,6 +1,7 @@
-use std::borrow::Borrow;
 #[cfg(test)]
 use std::collections::BTreeSet;
+use std::collections::HashMap;
+use std::marker::PhantomData;
 use std::mem;
 use std::sync::{Arc, Mutex, RwLock};
 
@@ -116,7 +117,7 @@ impl<T: MemoryUsage> MemoryUsage for &T {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + if tracker.track(*self as *const T as *const ()) {
-                MemoryUsage::size_of_val(*self, tracker)
+                (*self).size_of_val(tracker)
             } else {
                 0
             }
@@ -587,7 +588,67 @@ mod test_sync_types {
     }
 }
 
-impl<T> MemoryUsage for std::marker::PhantomData<T> {
+// Collection types.
+impl<K: MemoryUsage, V: MemoryUsage> MemoryUsage for HashMap<K, V> {
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
+        mem::size_of_val(self)
+            + self
+                .iter()
+                .map(|(key, value)| key.size_of_val(tracker) + value.size_of_val(tracker))
+                .sum::<usize>()
+    }
+}
+
+#[cfg(test)]
+mod test_collection_types {
+    use super::*;
+
+    #[test]
+    fn test_hashmap() {
+        let mut hashmap: HashMap<i8, i32> = HashMap::new();
+        let empty_hashmap_size = mem::size_of_val(&hashmap);
+        assert_size_of_val_eq!(hashmap, empty_hashmap_size + 1 * 0 + 4 * 0);
+
+        hashmap.insert(1, 1);
+        assert_size_of_val_eq!(hashmap, empty_hashmap_size + 1 * 1 + 4 * 1);
+
+        hashmap.insert(2, 2);
+        assert_size_of_val_eq!(hashmap, empty_hashmap_size + 1 * 2 + 4 * 2);
+    }
+
+    #[test]
+    fn test_hashmap_not_unique() {
+        let mut hashmap: HashMap<i8, &i32> = HashMap::new();
+        let empty_hashmap_size = mem::size_of_val(&hashmap);
+        assert_size_of_val_eq!(
+            hashmap,
+            empty_hashmap_size + 1 * 0 + (POINTER_BYTE_SIZE + 4) * 0
+        );
+
+        let one: i32 = 1;
+        hashmap.insert(1, &one);
+        assert_size_of_val_eq!(
+            hashmap,
+            empty_hashmap_size + 1 * 1 + (POINTER_BYTE_SIZE + 4) * 1
+        );
+
+        let two: i32 = 2;
+        hashmap.insert(2, &two);
+        assert_size_of_val_eq!(
+            hashmap,
+            empty_hashmap_size + 1 * 2 + (POINTER_BYTE_SIZE + 4) * 2
+        );
+
+        // Push a reference to an item that already exists!
+        hashmap.insert(3, &one);
+        assert_size_of_val_eq!(
+            hashmap,
+            empty_hashmap_size + 1 * 3 + (POINTER_BYTE_SIZE + 4) * 2 + POINTER_BYTE_SIZE + 0 /* no i32 */
+        );
+    }
+}
+
+impl<T> MemoryUsage for PhantomData<T> {
     fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
         0
     }
