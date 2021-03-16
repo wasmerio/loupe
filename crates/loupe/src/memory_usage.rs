@@ -359,19 +359,9 @@ mod test_tuple_types {
 // Standard library types
 
 // Box types.
-impl<T: MemoryUsage> MemoryUsage for Box<T> {
+impl<T: MemoryUsage + ?Sized> MemoryUsage for Box<T> {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self) + self.as_ref().size_of_val(tracker)
-    }
-}
-
-impl<T: MemoryUsage> MemoryUsage for Box<[T]> {
-    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
-        mem::size_of_val(self)
-            + self
-                .iter()
-                .map(|value| value.size_of_val(tracker))
-                .sum::<usize>()
     }
 }
 
