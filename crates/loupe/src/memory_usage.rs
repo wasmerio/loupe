@@ -587,8 +587,6 @@ mod test_sync_types {
     }
 }
 
-// Mutex types.
-
 impl<T> MemoryUsage for std::marker::PhantomData<T> {
     fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
         0
@@ -604,6 +602,5 @@ impl<T> MemoryUsage for std::marker::PhantomData<T> {
 // * Ref
 // * RefCell
 // * RefMut
-// * RwLock
 // * UnsafeCell
 // * PhantomPinned
