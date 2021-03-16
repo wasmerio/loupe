@@ -364,6 +364,16 @@ impl<T: MemoryUsage> MemoryUsage for Box<T> {
     }
 }
 
+impl<T: MemoryUsage> MemoryUsage for Box<[T]> {
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
+        mem::size_of_val(self)
+            + self
+                .iter()
+                .map(|value| value.size_of_val(tracker))
+                .sum::<usize>()
+    }
+}
+
 #[cfg(test)]
 mod test_box_types {
     use super::*;
@@ -384,6 +394,15 @@ mod test_box_types {
             b,
             POINTER_BYTE_SIZE + 1 /* i8 */ + 2 /* i16 */ + 1, /* padding */
         );
+    }
+
+    #[test]
+    fn test_boxed_slice() {
+        let b: Box<[u8]> = vec![].into_boxed_slice();
+        assert_size_of_val_eq!(b, 2 * POINTER_BYTE_SIZE);
+
+        let b: Box<[u8]> = vec![1, 2, 3].into_boxed_slice();
+        assert_size_of_val_eq!(b, 2 * POINTER_BYTE_SIZE + 1 * 3);
     }
 }
 
@@ -561,7 +580,6 @@ impl<T> MemoryUsage for std::marker::PhantomData<T> {
 
 // TODO:
 //
-// * Box<[T]>
 // * Cell
 // * Pin (is a Pin always referenceable?)
 // * NonNull (might be possible when '*const T' is MemoryUsage)
