@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::mem;
 use std::path::PathBuf;
+use std::ptr::NonNull;
 use std::sync::{Arc, Mutex, RwLock};
 
 pub const POINTER_BYTE_SIZE: usize = if cfg!(target_pointer_width = "16") {
@@ -172,6 +173,16 @@ impl<T> MemoryUsage for *mut T {
     }
 }
 
+impl<T> MemoryUsage for NonNull<T> {
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
+        if tracker.track(self.as_ptr() as *const _ as *const ()) {
+            POINTER_BYTE_SIZE
+        } else {
+            0
+        }
+    }
+}
+
 #[cfg(test)]
 mod test_pointer_types {
     use super::*;
@@ -198,6 +209,13 @@ mod test_pointer_types {
 
         let ptr = &mut x as *mut _;
         assert_size_of_val_eq!(ptr, 0, &mut tracker);
+    }
+
+    #[test]
+    fn test_nonnull_pointer() {
+        let mut x = 1i8;
+        let ptr = NonNull::new(&mut x as *mut _).unwrap();
+        assert_size_of_val_eq!(ptr, POINTER_BYTE_SIZE);
     }
 }
 
@@ -721,7 +739,6 @@ mod test_path_types {
 //
 // * Cell
 // * Pin (is a Pin always referenceable?)
-// * NonNull (might be possible when '*const T' is MemoryUsage)
 // * Rc
 // * Ref
 // * RefCell
