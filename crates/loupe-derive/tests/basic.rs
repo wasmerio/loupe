@@ -1,4 +1,4 @@
-use loupe::MemoryUsage;
+use loupe::{MemoryUsage, POINTER_BYTE_SIZE};
 use loupe_derive::MemoryUsage;
 
 use std::collections::BTreeSet;
@@ -167,4 +167,29 @@ fn test_enum_variant_ignored() {
         24,
         F::Points(vec![Point { x: 1, y: 2 }, Point { x: 3, y: 4 }])
     );
+}
+
+#[test]
+fn test_ptr() {
+    #[derive(MemoryUsage)]
+    #[repr(C)]
+    struct X(u8);
+
+    #[derive(MemoryUsage)]
+    #[repr(transparent)]
+    struct P(*const X);
+
+    #[derive(MemoryUsage)]
+    struct Q {
+        ptr: *const X,
+    }
+
+    let x = X(42);
+    let ptr = P(&x as *const _);
+    assert_size_of_val_eq!(POINTER_BYTE_SIZE, ptr);
+
+    let ptr = Q {
+        ptr: &x as *const _,
+    };
+    assert_size_of_val_eq!(POINTER_BYTE_SIZE, ptr);
 }
