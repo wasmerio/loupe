@@ -2,7 +2,42 @@
 use crate::{assert_size_of_val_eq, POINTER_BYTE_SIZE};
 use crate::{MemoryUsage, MemoryUsageTracker};
 use std::mem;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{
+    atomic::{
+        AtomicBool, AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize, AtomicU16, AtomicU32,
+        AtomicU64, AtomicU8, AtomicUsize,
+    },
+    Arc, Mutex, RwLock,
+};
+
+// Atomic types.
+macro_rules! impl_memory_usage_for_numeric {
+    ( $type:ty ) => {
+        impl MemoryUsage for $type {
+            fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
+                mem::size_of_val(self)
+            }
+        }
+    };
+
+    ( $( $type:ty ),+ $(,)* ) => {
+        $( impl_memory_usage_for_numeric!( $type ); )+
+    }
+}
+
+impl_memory_usage_for_numeric!(
+    AtomicBool,
+    AtomicI8,
+    AtomicI16,
+    AtomicI32,
+    AtomicI64,
+    AtomicIsize,
+    AtomicU8,
+    AtomicU16,
+    AtomicU32,
+    AtomicU64,
+    AtomicUsize,
+);
 
 // Sync types.
 impl<T: MemoryUsage + ?Sized> MemoryUsage for Arc<T> {
@@ -26,6 +61,33 @@ impl<T: MemoryUsage + ?Sized> MemoryUsage for RwLock<T> {
 #[cfg(test)]
 mod test_sync_types {
     use super::*;
+
+    macro_rules! test_memory_usage_for_numeric {
+        ($test_name:ident: ($value:expr) == $expected:expr) => {
+            #[test]
+            fn $test_name() {
+                assert_size_of_val_eq!($value, $expected);
+            }
+        };
+
+        ( $( $test_name:ident: ($value:expr) == $expected:expr );+ $(;)* ) => {
+            $( test_memory_usage_for_numeric!( $test_name: ($value) == $expected); )+
+        }
+    }
+
+    test_memory_usage_for_numeric!(
+        test_atomic_bool: (AtomicBool::new(true)) == 1;
+        test_atomic_i8: (AtomicI8::new(1i8)) == 1;
+        test_atomic_i16: (AtomicI16::new(1i16)) == 2;
+        test_atomic_i32: (AtomicI32::new(1i32)) == 4;
+        test_atomic_i64: (AtomicI64::new(1i64)) == 8;
+        test_atomic_isize: (AtomicIsize::new(1isize)) == POINTER_BYTE_SIZE;
+        test_atomic_u8: (AtomicU8::new(1u8)) == 1;
+        test_atomic_u16: (AtomicU16::new(1u16)) == 2;
+        test_atomic_u32: (AtomicU32::new(1u32)) == 4;
+        test_atomic_u64: (AtomicU64::new(1u64)) == 8;
+        test_atomic_usize: (AtomicUsize::new(1usize)) == POINTER_BYTE_SIZE;
+    );
 
     #[test]
     fn test_arc() {
