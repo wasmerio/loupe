@@ -5,3 +5,9 @@ description = "Memory profiling tool for Rust"
 repository = "https://github.com/wasmerio/loupe"
 license = "MIT"
 edition = "2018"
+
+[dependencies]
+indexmap = { version = "1.6", optional = true }
+
+[features]
+enable-indexmap = ["indexmap"]
