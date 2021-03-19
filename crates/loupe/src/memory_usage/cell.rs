@@ -18,7 +18,7 @@ impl<T: MemoryUsage> MemoryUsage for RefCell<T> {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + match self.try_borrow() {
-                Ok(borrowed) if tracker.track(self.as_ptr() as *mut _ as *const ()) => {
+                Ok(borrowed) if tracker.track(self.as_ptr() as *const _ as *const ()) => {
                     borrowed.size_of_val(tracker)
                 }
 
