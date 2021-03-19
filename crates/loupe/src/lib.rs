@@ -1,6 +1,6 @@
 mod memory_usage;
 
-pub use memory_usage::{MemoryUsage, MemoryUsageTracker, POINTER_BYTE_SIZE};
+pub use memory_usage::*;
 use std::collections::BTreeSet;
 
 pub fn size_of_val<T: MemoryUsage>(value: &T) -> usize {
