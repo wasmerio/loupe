@@ -39,10 +39,14 @@ impl_memory_usage_for_numeric!(
     AtomicUsize,
 );
 
-// Sync types.
 impl<T: MemoryUsage + ?Sized> MemoryUsage for Arc<T> {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
-        mem::size_of_val(self) + self.as_ref().size_of_val(tracker)
+        mem::size_of_val(self)
+            + if tracker.track(Arc::as_ptr(self) as *const ()) {
+                self.as_ref().size_of_val(tracker)
+            } else {
+                0
+            }
     }
 }
 
