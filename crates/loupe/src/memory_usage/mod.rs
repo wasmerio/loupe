@@ -1,4 +1,5 @@
 mod alloc;
+mod any;
 mod r#box;
 mod cell;
 mod collection;
@@ -14,6 +15,7 @@ mod string;
 mod sync;
 
 pub use alloc::*;
+pub use any::*;
 pub use cell::*;
 pub use collection::*;
 pub use marker::*;
