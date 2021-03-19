@@ -6,7 +6,14 @@ use std::mem;
 // Box types.
 impl<T: MemoryUsage + ?Sized> MemoryUsage for Box<T> {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
-        mem::size_of_val(self) + self.as_ref().size_of_val(tracker)
+        let reference = self.as_ref();
+
+        mem::size_of_val(self)
+            + if tracker.track(reference as *const _ as *const ()) {
+                reference.size_of_val(tracker)
+            } else {
+                0
+            }
     }
 }
 
