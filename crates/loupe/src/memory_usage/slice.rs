@@ -34,6 +34,7 @@ where
 mod test_slice_types {
     use super::*;
 
+    #[rustversion::nightly]
     #[test]
     fn test_slice() {
         assert_size_of_val_eq!([1i16], 2 * 1);
