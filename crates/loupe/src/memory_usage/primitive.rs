@@ -56,6 +56,7 @@ mod test_numeric_types {
     );
 }
 
+#[rustversion::nightly]
 impl<T, const N: usize> MemoryUsage for [T; N]
 where
     T: MemoryUsage,
@@ -69,6 +70,7 @@ where
     }
 }
 
+#[rustversion::nightly]
 #[cfg(test)]
 mod test_array_types {
     use super::*;
