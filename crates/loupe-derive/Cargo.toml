@@ -12,5 +12,6 @@ proc-macro = true
 [dependencies]
 syn = { version = "1.0", features = ["full"] }
 quote = "1.0"
-loupe = { path = "../loupe", version = "0.1.0" }
 
+[dev-dependencies]
+loupe = { path = "../loupe" }

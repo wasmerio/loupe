@@ -1,6 +1,9 @@
 mod memory_usage;
 
+#[cfg(feature = "derive")]
+pub use loupe_derive::*;
 pub use memory_usage::*;
+
 use std::collections::BTreeSet;
 
 pub fn size_of_val<T: MemoryUsage>(value: &T) -> usize {
