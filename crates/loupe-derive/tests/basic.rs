@@ -1,5 +1,4 @@
 use loupe::{MemoryUsage, POINTER_BYTE_SIZE};
-use loupe_derive::MemoryUsage;
 
 use std::collections::BTreeSet;
 
