@@ -3,8 +3,10 @@ use crate::{assert_size_of_val_eq, POINTER_BYTE_SIZE};
 use crate::{MemoryUsage, MemoryUsageTracker};
 use std::mem;
 
-// Slice types.
-impl<T: MemoryUsage> MemoryUsage for [T] {
+impl<T> MemoryUsage for [T]
+where
+    T: MemoryUsage,
+{
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + self
@@ -14,7 +16,10 @@ impl<T: MemoryUsage> MemoryUsage for [T] {
     }
 }
 
-impl<T: MemoryUsage> MemoryUsage for &[T] {
+impl<T> MemoryUsage for &[T]
+where
+    T: MemoryUsage,
+{
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + if tracker.track(*self as *const [T] as *const ()) {

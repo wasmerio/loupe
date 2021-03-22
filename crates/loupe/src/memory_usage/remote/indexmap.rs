@@ -4,7 +4,10 @@ use crate::{MemoryUsage, MemoryUsageTracker};
 use indexmap::IndexMap;
 use std::mem;
 
-impl<K, V: MemoryUsage> MemoryUsage for IndexMap<K, V> {
+impl<K, V> MemoryUsage for IndexMap<K, V>
+where
+    V: MemoryUsage,
+{
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + self

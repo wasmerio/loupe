@@ -3,8 +3,11 @@ use crate::assert_size_of_val_eq;
 use crate::{MemoryUsage, MemoryUsageTracker};
 use std::mem;
 
-// Result types.
-impl<T: MemoryUsage, E: MemoryUsage> MemoryUsage for Result<T, E> {
+impl<T, E> MemoryUsage for Result<T, E>
+where
+    T: MemoryUsage,
+    E: MemoryUsage,
+{
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + match self.as_ref() {

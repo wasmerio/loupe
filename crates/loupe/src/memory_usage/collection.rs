@@ -4,8 +4,10 @@ use crate::{MemoryUsage, MemoryUsageTracker};
 use std::collections::HashMap;
 use std::mem;
 
-// Vector types.
-impl<T: MemoryUsage> MemoryUsage for Vec<T> {
+impl<T> MemoryUsage for Vec<T>
+where
+    T: MemoryUsage,
+{
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + self
@@ -60,8 +62,11 @@ mod test_vec_types {
     }
 }
 
-// Collection types.
-impl<K: MemoryUsage, V: MemoryUsage> MemoryUsage for HashMap<K, V> {
+impl<K, V> MemoryUsage for HashMap<K, V>
+where
+    K: MemoryUsage,
+    V: MemoryUsage,
+{
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + self

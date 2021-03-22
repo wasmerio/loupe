@@ -4,7 +4,6 @@ use crate::{MemoryUsage, MemoryUsageTracker};
 use std::mem;
 use std::path::PathBuf;
 
-// Path types.
 impl MemoryUsage for PathBuf {
     fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self) + self.capacity()
