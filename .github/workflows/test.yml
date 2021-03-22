@@ -1,0 +1,25 @@
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  test:
+    name: Build and Test
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features
