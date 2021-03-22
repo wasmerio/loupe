@@ -35,7 +35,7 @@ fn test_struct_field_ignored() {
     #[allow(unused)]
     struct T {
         x: Vec<i32>,
-        #[memoryusage(ignore)]
+        #[loupe(skip)]
         y: Vec<i32>,
     }
 
@@ -158,7 +158,7 @@ fn test_enum_variant_ignored() {
     #[allow(unused)]
     enum F {
         A,
-        #[memoryusage(ignore)]
+        #[loupe(skip)]
         Points(Vec<Point>),
     }
 

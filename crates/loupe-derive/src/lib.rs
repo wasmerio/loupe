@@ -4,7 +4,7 @@ use syn::{
     parse, Attribute, Data, DataEnum, DataStruct, DeriveInput, Fields, Generics, Ident, Index,
 };
 
-#[proc_macro_derive(MemoryUsage, attributes(memoryusage))]
+#[proc_macro_derive(MemoryUsage, attributes(loupe))]
 pub fn derive_memory_usage(input: TokenStream) -> TokenStream {
     let derive_input: DeriveInput = parse(input).unwrap();
 
@@ -61,7 +61,7 @@ fn derive_memory_usage_for_struct(
                 .named
                 .iter()
                 .filter_map(|field| {
-                    if must_ignore(&field.attrs) {
+                    if must_skip(&field.attrs) {
                         return None;
                     }
 
@@ -87,7 +87,7 @@ fn derive_memory_usage_for_struct(
                 .iter()
                 .enumerate()
                 .filter_map(|(nth, field)| {
-                    if must_ignore(&field.attrs) {
+                    if must_skip(&field.attrs) {
                         return None;
                     }
 
@@ -250,7 +250,7 @@ fn derive_memory_usage_for_enum(
                     }
                 };
 
-                if must_ignore(&variant.attrs) {
+                if must_skip(&variant.attrs) {
                     sum = quote! { 0 };
                 }
 
@@ -280,11 +280,11 @@ fn derive_memory_usage_for_enum(
     .into()
 }
 
-fn must_ignore(attrs: &Vec<Attribute>) -> bool {
+fn must_skip(attrs: &Vec<Attribute>) -> bool {
     attrs.iter().any(|attr| {
-        attr.path.is_ident("memoryusage")
+        attr.path.is_ident("loupe")
             && match attr.parse_args::<Ident>() {
-                Ok(e) if e.to_string() == "ignore" => true,
+                Ok(e) if e.to_string() == "skip" => true,
                 _ => false,
             }
     })
