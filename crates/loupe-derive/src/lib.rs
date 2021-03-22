@@ -280,12 +280,8 @@ fn derive_memory_usage_for_enum(
     .into()
 }
 
-fn must_skip(attrs: &Vec<Attribute>) -> bool {
+fn must_skip(attrs: &[Attribute]) -> bool {
     attrs.iter().any(|attr| {
-        attr.path.is_ident("loupe")
-            && match attr.parse_args::<Ident>() {
-                Ok(e) if e.to_string() == "skip" => true,
-                _ => false,
-            }
+        attr.path.is_ident("loupe") && matches!(attr.parse_args::<Ident>(), Ok(a) if a == "skip")
     })
 }

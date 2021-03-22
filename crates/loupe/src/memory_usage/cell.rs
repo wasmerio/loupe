@@ -14,7 +14,10 @@ impl<T> MemoryUsage for UnsafeCell<T> {
     }
 }
 
-impl<T: MemoryUsage> MemoryUsage for RefCell<T> {
+impl<T> MemoryUsage for RefCell<T>
+where
+    T: MemoryUsage,
+{
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + match self.try_borrow() {

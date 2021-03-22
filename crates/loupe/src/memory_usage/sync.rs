@@ -10,7 +10,6 @@ use std::sync::{
     Arc, Mutex, RwLock,
 };
 
-// Atomic types.
 macro_rules! impl_memory_usage_for_numeric {
     ( $type:ty ) => {
         impl MemoryUsage for $type {
@@ -39,7 +38,10 @@ impl_memory_usage_for_numeric!(
     AtomicUsize,
 );
 
-impl<T: MemoryUsage + ?Sized> MemoryUsage for Arc<T> {
+impl<T> MemoryUsage for Arc<T>
+where
+    T: MemoryUsage + ?Sized,
+{
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + if tracker.track(Arc::as_ptr(self) as *const ()) {
@@ -50,13 +52,19 @@ impl<T: MemoryUsage + ?Sized> MemoryUsage for Arc<T> {
     }
 }
 
-impl<T: MemoryUsage + ?Sized> MemoryUsage for Mutex<T> {
+impl<T> MemoryUsage for Mutex<T>
+where
+    T: MemoryUsage + ?Sized,
+{
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self) + self.lock().unwrap().size_of_val(tracker)
     }
 }
 
-impl<T: MemoryUsage + ?Sized> MemoryUsage for RwLock<T> {
+impl<T> MemoryUsage for RwLock<T>
+where
+    T: MemoryUsage + ?Sized,
+{
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self) + self.read().unwrap().size_of_val(tracker)
     }

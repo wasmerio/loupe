@@ -3,8 +3,10 @@ use crate::{assert_size_of_val_eq, POINTER_BYTE_SIZE};
 use crate::{MemoryUsage, MemoryUsageTracker};
 use std::mem;
 
-// Box types.
-impl<T: MemoryUsage + ?Sized> MemoryUsage for Box<T> {
+impl<T> MemoryUsage for Box<T>
+where
+    T: MemoryUsage + ?Sized,
+{
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         let reference = self.as_ref();
 

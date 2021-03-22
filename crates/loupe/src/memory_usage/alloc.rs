@@ -4,7 +4,6 @@ use crate::{MemoryUsage, MemoryUsageTracker};
 use std::alloc::Layout;
 use std::mem;
 
-// Alloc types.
 impl MemoryUsage for Layout {
     fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)

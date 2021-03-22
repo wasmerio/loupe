@@ -3,8 +3,10 @@ use crate::{assert_size_of_val_eq, POINTER_BYTE_SIZE};
 use crate::{MemoryUsage, MemoryUsageTracker};
 use std::mem;
 
-// Option types.
-impl<T: MemoryUsage> MemoryUsage for Option<T> {
+impl<T> MemoryUsage for Option<T>
+where
+    T: MemoryUsage,
+{
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + self

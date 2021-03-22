@@ -38,8 +38,10 @@ pub const POINTER_BYTE_SIZE: usize = if cfg!(target_pointer_width = "16") {
     8
 };
 
+/// Represent a bucket that can track memory pointers that have
+/// already been visited.
 pub trait MemoryUsageTracker {
-    /// When first called on a given address returns true, else returns false.
+    /// When first called on a given address returns true, false otherwise.
     fn track(&mut self, address: *const ()) -> bool;
 }
 
@@ -55,19 +57,13 @@ impl MemoryUsageTracker for std::collections::HashSet<*const ()> {
     }
 }
 
+/// Traverse a type a collect its memory usage.
 pub trait MemoryUsage {
     /// Returns the size of the referenced value in bytes.
     ///
     /// Recursively visits the value and any children returning the sum of their
     /// sizes. The size always includes any tail padding if applicable.
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize;
-}
-
-// Empty type.
-impl MemoryUsage for () {
-    fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
-        0
-    }
 }
 
 #[macro_export]

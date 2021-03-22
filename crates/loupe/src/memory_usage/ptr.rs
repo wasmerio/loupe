@@ -4,7 +4,6 @@ use crate::{MemoryUsage, MemoryUsageTracker, POINTER_BYTE_SIZE};
 use std::mem;
 use std::ptr::NonNull;
 
-// Pointer types.
 impl<T> MemoryUsage for *const T {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         if tracker.track(*self as *const ()) {
@@ -72,8 +71,10 @@ mod test_pointer_types {
     }
 }
 
-// Reference types.
-impl<T: MemoryUsage> MemoryUsage for &T {
+impl<T> MemoryUsage for &T
+where
+    T: MemoryUsage,
+{
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + if tracker.track(*self as *const T as *const ()) {
@@ -84,7 +85,10 @@ impl<T: MemoryUsage> MemoryUsage for &T {
     }
 }
 
-impl<T: MemoryUsage> MemoryUsage for &mut T {
+impl<T> MemoryUsage for &mut T
+where
+    T: MemoryUsage,
+{
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + if tracker.track(*self as *const T as *const ()) {

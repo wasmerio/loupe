@@ -3,7 +3,6 @@ use crate::{assert_size_of_val_eq, POINTER_BYTE_SIZE};
 use crate::{MemoryUsage, MemoryUsageTracker};
 use std::mem;
 
-// String types.
 impl MemoryUsage for &str {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self) + self.as_bytes().size_of_val(tracker)

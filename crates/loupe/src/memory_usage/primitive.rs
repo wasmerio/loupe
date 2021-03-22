@@ -3,7 +3,6 @@ use crate::{assert_size_of_val_eq, POINTER_BYTE_SIZE};
 use crate::{MemoryUsage, MemoryUsageTracker};
 use std::mem;
 
-// Numeric types.
 macro_rules! impl_memory_usage_for_numeric {
     ( $type:ty ) => {
         impl MemoryUsage for $type {
@@ -57,8 +56,10 @@ mod test_numeric_types {
     );
 }
 
-// Array types.
-impl<T: MemoryUsage, const N: usize> MemoryUsage for [T; N] {
+impl<T, const N: usize> MemoryUsage for [T; N]
+where
+    T: MemoryUsage,
+{
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
         mem::size_of_val(self)
             + self
@@ -91,7 +92,12 @@ mod test_array_types {
     }
 }
 
-// Tuple types.
+impl MemoryUsage for () {
+    fn size_of_val(&self, _: &mut dyn MemoryUsageTracker) -> usize {
+        0
+    }
+}
+
 macro_rules! impl_memory_usage_for_tuple {
     ( $first_type:ident $(,)* ) => {};
 
@@ -120,6 +126,12 @@ impl_memory_usage_for_tuple!(A, B, C, D, E, F, G, H, I, J, K, L);
 #[cfg(test)]
 mod test_tuple_types {
     use super::*;
+
+    #[test]
+    fn test_empty_tuple() {
+        let empty = ();
+        assert_size_of_val_eq!(empty, 0);
+    }
 
     #[test]
     fn test_tuple() {
