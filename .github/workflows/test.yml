@@ -17,6 +17,8 @@ jobs:
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
