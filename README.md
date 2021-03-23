@@ -50,7 +50,7 @@ trait if possible, on `struct`s and `enum`s.
 Thus, one only needs to write:
 
 ```rust
-use loupe::{self, MemoryUsage};
+use loupe::MemoryUsage;
 use std::mem;
 
 #[derive(MemoryUsage)]

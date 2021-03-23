@@ -30,6 +30,7 @@ pub use slice::*;
 pub use string::*;
 pub use sync::*;
 
+/// Size of a pointer for the compilation target.
 pub const POINTER_BYTE_SIZE: usize = if cfg!(target_pointer_width = "16") {
     2
 } else if cfg!(target_pointer_width = "32") {
@@ -38,8 +39,8 @@ pub const POINTER_BYTE_SIZE: usize = if cfg!(target_pointer_width = "16") {
     8
 };
 
-/// Represent a bucket that can track memory pointers that have
-/// already been visited.
+/// Represent a bucket that can track memory addresses that have
+/// already been visited by `MemoryUsage`.
 pub trait MemoryUsageTracker {
     /// When first called on a given address returns true, false otherwise.
     fn track(&mut self, address: *const ()) -> bool;
@@ -57,7 +58,7 @@ impl MemoryUsageTracker for std::collections::HashSet<*const ()> {
     }
 }
 
-/// Traverse a type a collect its memory usage.
+/// Traverse a value and collect its memory usage.
 pub trait MemoryUsage {
     /// Returns the size of the referenced value in bytes.
     ///
@@ -66,6 +67,7 @@ pub trait MemoryUsage {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize;
 }
 
+/// Alias to `assert_eq!(loupe::MemoryUsage::size_of_val(&$value), $expected)`.
 #[macro_export]
 macro_rules! assert_size_of_val_eq {
     ($value:expr, $expected:expr $(,)*) => {

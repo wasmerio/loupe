@@ -1,9 +1,38 @@
+//! Companion of the [`loupe`](../loupe-derive/index.html) crate.
+
 use proc_macro::TokenStream;
 use quote::{format_ident, quote, quote_spanned};
 use syn::{
     parse, Attribute, Data, DataEnum, DataStruct, DeriveInput, Fields, Generics, Ident, Index,
 };
 
+/// Procedural macro to implement the `loupe::MemoryUsage` trait
+/// automatically for structs and enums.
+///
+/// All struct fields and enum variants must implement `MemoryUsage`
+/// trait. If it's not possible, the `#[loupe(skip)]` attribute can be
+/// used on a field or a variant to instruct the derive procedural
+/// macro to skip that item.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// #[derive(MemoryUsage)]
+/// struct Point {
+///     x: i32,
+///     y: i32,
+/// }
+///
+/// struct Mystery { ptr: *const i32 }
+///
+/// #[derive(MemoryUsage)]
+/// struct S {
+///     points: Vec<Point>,
+///
+///     #[loupe(skip)]
+///     other: Mystery,
+/// }
+/// ```
 #[proc_macro_derive(MemoryUsage, attributes(loupe))]
 pub fn derive_memory_usage(input: TokenStream) -> TokenStream {
     let derive_input: DeriveInput = parse(input).unwrap();

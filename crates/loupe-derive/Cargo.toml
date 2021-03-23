@@ -1,7 +1,7 @@
 [package]
 name = "loupe-derive"
 version = "0.1.0"
-description = "Memory profiling tool for Rust"
+description = "Profiling tool for Rust, see the `loupe` crate"
 repository = "https://github.com/wasmerio/loupe"
 license = "MIT"
 edition = "2018"
