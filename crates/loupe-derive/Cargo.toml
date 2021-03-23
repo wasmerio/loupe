@@ -1,6 +1,6 @@
 [package]
 name = "loupe-derive"
-version = "0.1.0"
+version = "0.1.1"
 description = "Profiling tool for Rust, see the `loupe` crate"
 repository = "https://github.com/wasmerio/loupe"
 license = "MIT"
