@@ -1,13 +1,8 @@
-use loupe::{MemoryUsage, POINTER_BYTE_SIZE};
-
-use std::collections::BTreeSet;
+use loupe::{size_of_val, MemoryUsage, POINTER_BYTE_SIZE};
 
 macro_rules! assert_size_of_val_eq {
     ($expected:expr, $value:expr) => {
-        assert_eq!(
-            $expected,
-            MemoryUsage::size_of_val(&$value, &mut BTreeSet::new())
-        );
+        assert_eq!($expected, size_of_val(&$value),);
     };
 }
 
