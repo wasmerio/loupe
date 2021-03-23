@@ -58,12 +58,23 @@ fn test_tuple() {
 }
 
 #[test]
-fn test_struct_generic() {
+fn test_struct_with_generic() {
     #[derive(MemoryUsage)]
     struct Generic<T>
     where
         T: MemoryUsage,
     {
+        x: T,
+        y: T,
+    }
+
+    assert_size_of_val_eq!(16, Generic { x: 1i64, y: 2i64 });
+}
+
+#[test]
+fn test_struct_with_inlined_generic() {
+    #[derive(MemoryUsage)]
+    struct Generic<T: MemoryUsage> {
         x: T,
         y: T,
     }
@@ -126,6 +137,33 @@ fn test_enum() {
         48,
         Things::Points(vec![Point { x: 1, y: 2 }, Point { x: 3, y: 4 }])
     );
+}
+
+#[test]
+fn test_enum_with_generic() {
+    #[derive(MemoryUsage)]
+    enum Generic<T>
+    where
+        T: MemoryUsage,
+    {
+        A(T),
+        B(T),
+    }
+
+    assert_size_of_val_eq!(16, Generic::<i64>::A(1));
+    assert_size_of_val_eq!(16, Generic::<i64>::B(2));
+}
+
+#[test]
+fn test_enum_with_inlined_generic() {
+    #[derive(MemoryUsage)]
+    enum Generic<T: MemoryUsage> {
+        A(T),
+        B(T),
+    }
+
+    assert_size_of_val_eq!(16, Generic::<i64>::A(1));
+    assert_size_of_val_eq!(16, Generic::<i64>::B(2));
 }
 
 #[test]
