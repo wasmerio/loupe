@@ -101,7 +101,7 @@ challenge it and come to discuss!
 
 ## License
 
-`BSD-3-Clause`, see `LICENSE`.
+`MIT` License, see `LICENSE`.
 
 
 [Wasmer]: https://github.com/wasmerio/wasmer
