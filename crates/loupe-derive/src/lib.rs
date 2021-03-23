@@ -77,8 +77,7 @@ fn derive_memory_usage_for_struct(
     data: &DataStruct,
     generics: &Generics,
 ) -> TokenStream {
-    let lifetimes_and_generics = &generics.params;
-    let where_clause = &generics.where_clause;
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let sum = join_fold(
         // Check all fields of the `struct`.
@@ -134,7 +133,7 @@ fn derive_memory_usage_for_struct(
     // Implement the `MemoryUsage` trait for `struct_name`.
     (quote! {
         #[allow(dead_code)]
-        impl < #lifetimes_and_generics > loupe::MemoryUsage for #struct_name < #lifetimes_and_generics >
+        impl #impl_generics loupe::MemoryUsage for #struct_name #ty_generics
         #where_clause
         {
             fn size_of_val(&self, visited: &mut loupe::MemoryUsageTracker) -> usize {
@@ -150,8 +149,7 @@ fn derive_memory_usage_for_enum(
     data: &DataEnum,
     generics: &Generics,
 ) -> TokenStream {
-    let lifetimes_and_generics = &generics.params;
-    let where_clause = &generics.where_clause;
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let match_arms = join_fold(
         data.variants
@@ -296,7 +294,7 @@ fn derive_memory_usage_for_enum(
     // Implement the `MemoryUsage` trait for `enum_name`.
     (quote! {
         #[allow(dead_code)]
-        impl < #lifetimes_and_generics > loupe::MemoryUsage for #enum_name < #lifetimes_and_generics >
+        impl #impl_generics loupe::MemoryUsage for #enum_name #ty_generics
         #where_clause
         {
             fn size_of_val(&self, visited: &mut loupe::MemoryUsageTracker) -> usize {
