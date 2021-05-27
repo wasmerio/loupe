@@ -7,7 +7,7 @@ use std::sync::{
         AtomicBool, AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize, AtomicU16, AtomicU32,
         AtomicU64, AtomicU8, AtomicUsize,
     },
-    Arc, Mutex, RwLock,
+    Arc, Mutex, RwLock, Weak,
 };
 
 macro_rules! impl_memory_usage_for_numeric {
@@ -46,6 +46,22 @@ where
         mem::size_of_val(self)
             + if tracker.track(Arc::as_ptr(self) as *const ()) {
                 self.as_ref().size_of_val(tracker)
+            } else {
+                0
+            }
+    }
+}
+
+impl<T> MemoryUsage for Weak<T>
+where
+    T: MemoryUsage + ?Sized,
+{
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
+        mem::size_of_val(self)
+            + if tracker.track(Weak::as_ptr(self) as *const ()) {
+                Weak::upgrade(self)
+                    .map(|arc| arc.as_ref().size_of_val(tracker))
+                    .unwrap_or(0)
             } else {
                 0
             }
@@ -110,6 +126,25 @@ mod test_sync_types {
 
         let arc: Arc<Option<i32>> = Arc::new(Some(1));
         assert_size_of_val_eq!(arc, empty_arc_size + POINTER_BYTE_SIZE + 4);
+    }
+
+    #[test]
+    fn test_weak() {
+        let empty_weak_size = mem::size_of_val(&Arc::downgrade(&Arc::new(())));
+
+        let arc: Arc<i32> = Arc::new(1);
+        let weak: Weak<i32> = Arc::downgrade(&arc);
+        assert_size_of_val_eq!(weak, empty_weak_size + 4);
+
+        let arc: Arc<Option<i32>> = Arc::new(Some(1));
+        let weak: Weak<Option<i32>> = Arc::downgrade(&arc);
+        assert_size_of_val_eq!(weak, empty_weak_size + POINTER_BYTE_SIZE + 4);
+
+        let weak: Weak<i32> = {
+            let arc: Arc<i32> = Arc::new(5);
+            Arc::downgrade(&arc)
+        };
+        assert_size_of_val_eq!(weak, empty_weak_size);
     }
 
     #[test]
