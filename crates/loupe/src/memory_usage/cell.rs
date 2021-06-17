@@ -6,11 +6,12 @@ use std::mem;
 
 impl<T> MemoryUsage for UnsafeCell<T> {
     fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
-        if tracker.track(self.get() as *const ()) {
-            POINTER_BYTE_SIZE
-        } else {
-            0
-        }
+        mem::size_of_val(self)
+            + if tracker.track(self.get() as *const ()) {
+                POINTER_BYTE_SIZE
+            } else {
+                0
+            }
     }
 }
 
@@ -38,7 +39,7 @@ mod test_cell_types {
     #[test]
     fn test_unsafecell() {
         let cell = UnsafeCell::<i8>::new(1);
-        assert_size_of_val_eq!(cell, POINTER_BYTE_SIZE);
+        assert_size_of_val_eq!(cell, mem::size_of_val(&cell) + POINTER_BYTE_SIZE);
     }
 
     #[test]
