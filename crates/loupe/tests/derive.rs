@@ -55,6 +55,12 @@ fn test_tuple() {
     struct Tuple(i32, i32);
 
     assert_size_of_val_eq!(8, Tuple(1, 2));
+
+    #[derive(MemoryUsage)]
+    #[repr(transparent)]
+    struct Ptr(*const usize);
+
+    assert_size_of_val_eq!(8, Ptr(&1));
 }
 
 #[test]
