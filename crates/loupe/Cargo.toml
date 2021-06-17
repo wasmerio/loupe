@@ -1,13 +1,13 @@
 [package]
 name = "loupe"
-version = "0.1.2"
+version = "0.1.3"
 description = "Profiling tool for Rust"
 repository = "https://github.com/wasmerio/loupe"
 license = "MIT"
 edition = "2018"
 
 [dependencies]
-loupe-derive = { path = "../loupe-derive", version = "0.1.1", optional = true }
+loupe-derive = { path = "../loupe-derive", version = "0.1.3", optional = true }
 indexmap = { version = "1.6", optional = true }
 rustversion = "1.0"
 
