@@ -5,62 +5,39 @@ use std::mem;
 use std::ptr::NonNull;
 
 impl<T> MemoryUsage for *const T {
-    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
-        if tracker.track(*self as *const ()) {
-            POINTER_BYTE_SIZE
-        } else {
-            0
-        }
+    fn size_of_val(&self, _tracker: &mut dyn MemoryUsageTracker) -> usize {
+        POINTER_BYTE_SIZE
     }
 }
 
 impl<T> MemoryUsage for *mut T {
-    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
-        if tracker.track(*self as *const _ as *const ()) {
-            POINTER_BYTE_SIZE
-        } else {
-            0
-        }
+    fn size_of_val(&self, _tracker: &mut dyn MemoryUsageTracker) -> usize {
+        POINTER_BYTE_SIZE
     }
 }
 
 impl<T> MemoryUsage for NonNull<T> {
-    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
-        if tracker.track(self.as_ptr() as *const _ as *const ()) {
-            POINTER_BYTE_SIZE
-        } else {
-            0
-        }
+    fn size_of_val(&self, _tracker: &mut dyn MemoryUsageTracker) -> usize {
+        POINTER_BYTE_SIZE
     }
 }
 
 #[cfg(test)]
 mod test_pointer_types {
     use super::*;
-    use std::collections::BTreeSet;
 
     #[test]
     fn test_pointer() {
-        let mut tracker = BTreeSet::new();
-
         let x = 1i8;
         let ptr = &x as *const _;
-        assert_size_of_val_eq!(ptr, POINTER_BYTE_SIZE, &mut tracker);
-
-        let ptr = &x as *const _;
-        assert_size_of_val_eq!(ptr, 0, &mut tracker);
+        assert_size_of_val_eq!(ptr, POINTER_BYTE_SIZE);
     }
 
     #[test]
     fn test_mutable_pointer() {
-        let mut tracker = BTreeSet::new();
-
         let mut x = 1i8;
         let ptr = &mut x as *mut _;
-        assert_size_of_val_eq!(ptr, POINTER_BYTE_SIZE, &mut tracker);
-
-        let ptr = &mut x as *mut _;
-        assert_size_of_val_eq!(ptr, 0, &mut tracker);
+        assert_size_of_val_eq!(ptr, POINTER_BYTE_SIZE);
     }
 
     #[test]
