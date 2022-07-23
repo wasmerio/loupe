@@ -1,7 +1,7 @@
 #[cfg(test)]
 use crate::{assert_size_of_val_eq, POINTER_BYTE_SIZE};
 use crate::{MemoryUsage, MemoryUsageTracker};
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use std::mem;
 
 impl<T> MemoryUsage for Vec<T>
@@ -76,6 +76,22 @@ where
     }
 }
 
+
+impl<K, V> MemoryUsage for BTreeMap<K, V>
+where
+    K: MemoryUsage,
+    V: MemoryUsage,
+{
+    fn size_of_val(&self, tracker: &mut dyn MemoryUsageTracker) -> usize {
+        mem::size_of_val(self)
+            + self
+                .iter()
+                .map(|(key, value)| key.size_of_val(tracker) + value.size_of_val(tracker))
+                .sum::<usize>()
+    }
+}
+
+
 #[cfg(test)]
 mod test_collection_types {
     use super::*;
@@ -121,6 +137,50 @@ mod test_collection_types {
         assert_size_of_val_eq!(
             hashmap,
             empty_hashmap_size + 1 * 3 + (POINTER_BYTE_SIZE + 4) * 2 + POINTER_BYTE_SIZE + 0 /* no i32 */
+        );
+    }
+    
+    #[test]
+    fn test_btreemap() {
+        let mut btreemap: BTreeMap<i8, i32> = BTreeMap::new();
+        let empty_btreemap_size = mem::size_of_val(&btreemap);
+        assert_size_of_val_eq!(btreemap, empty_btreemap_size + 1 * 0 + 4 * 0);
+
+        btreemap.insert(1, 1);
+        assert_size_of_val_eq!(btreemap, empty_btreemap_size + 1 * 1 + 4 * 1);
+
+        btreemap.insert(2, 2);
+        assert_size_of_val_eq!(btreemap, empty_btreemap_size + 1 * 2 + 4 * 2);
+    }
+
+    #[test]
+    fn test_btreemap_not_unique() {
+        let mut btreemap: BTreeMap<i8, &i32> = BTreeMap::new();
+        let empty_btreemap_size = mem::size_of_val(&btreemap);
+        assert_size_of_val_eq!(
+            btreemap,
+            empty_btreemap_size + 1 * 0 + (POINTER_BYTE_SIZE + 4) * 0
+        );
+
+        let one: i32 = 1;
+        btreemap.insert(1, &one);
+        assert_size_of_val_eq!(
+            btreemap,
+            empty_btreemap_size + 1 * 1 + (POINTER_BYTE_SIZE + 4) * 1
+        );
+
+        let two: i32 = 2;
+        btreemap.insert(2, &two);
+        assert_size_of_val_eq!(
+            btreemap,
+            empty_btreemap_size + 1 * 2 + (POINTER_BYTE_SIZE + 4) * 2
+        );
+
+        // Push a reference to an item that already exists!
+        btreemap.insert(3, &one);
+        assert_size_of_val_eq!(
+            btreemap,
+            empty_btreemap_size + 1 * 3 + (POINTER_BYTE_SIZE + 4) * 2 + POINTER_BYTE_SIZE + 0 /* no i32 */
         );
     }
 }
