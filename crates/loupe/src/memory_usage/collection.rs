@@ -1,7 +1,7 @@
 #[cfg(test)]
 use crate::{assert_size_of_val_eq, POINTER_BYTE_SIZE};
 use crate::{MemoryUsage, MemoryUsageTracker};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap, HashMap};
 use std::mem;
 
 impl<T> MemoryUsage for Vec<T>
@@ -76,7 +76,6 @@ where
     }
 }
 
-
 impl<K, V> MemoryUsage for BTreeMap<K, V>
 where
     K: MemoryUsage,
@@ -90,7 +89,6 @@ where
                 .sum::<usize>()
     }
 }
-
 
 #[cfg(test)]
 mod test_collection_types {
@@ -139,7 +137,7 @@ mod test_collection_types {
             empty_hashmap_size + 1 * 3 + (POINTER_BYTE_SIZE + 4) * 2 + POINTER_BYTE_SIZE + 0 /* no i32 */
         );
     }
-    
+
     #[test]
     fn test_btreemap() {
         let mut btreemap: BTreeMap<i8, i32> = BTreeMap::new();
