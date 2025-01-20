@@ -130,17 +130,17 @@ fn test_enum() {
         Points(Vec<Point>),
     }
 
-    assert_size_of_val_eq!(32, Things::A);
-    assert_size_of_val_eq!(32, Things::B());
-    assert_size_of_val_eq!(32, Things::C(1));
-    assert_size_of_val_eq!(32, Things::D { x: 1 });
-    assert_size_of_val_eq!(32, Things::E(1, 2));
-    assert_size_of_val_eq!(32, Things::F { x: 1, y: 2 });
+    assert_size_of_val_eq!(24, Things::A);
+    assert_size_of_val_eq!(24, Things::B());
+    assert_size_of_val_eq!(24, Things::C(1));
+    assert_size_of_val_eq!(24, Things::D { x: 1 });
+    assert_size_of_val_eq!(24, Things::E(1, 2));
+    assert_size_of_val_eq!(24, Things::F { x: 1, y: 2 });
 
     assert_size_of_val_eq!(8, Point { x: 1, y: 2 });
     assert_size_of_val_eq!(40, vec![Point { x: 1, y: 2 }, Point { x: 3, y: 4 }]);
     assert_size_of_val_eq!(
-        48,
+        40,
         Things::Points(vec![Point { x: 1, y: 2 }, Point { x: 3, y: 4 }])
     );
 }
